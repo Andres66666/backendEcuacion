@@ -1,6 +1,6 @@
 from django.shortcuts import render
-from .models import Categorias, Materiales, Permiso, Rol, RolPermiso, Usuario, UsuarioRol
-from .serializers import  CategoriasSerializer, MaterialesSerializer, PermisoSerializer, RolPermisoSerializer, RolSerializer, UsuarioRolSerializer, UsuarioSerializer
+from .models import Categorias, Ecuacion, EquipoHerramienta, GastosGeneralesAdministrativos, ManoDeObra, Materiales, Permiso, Rol, RolPermiso, Usuario, UsuarioRol
+from .serializers import  CategoriasSerializer, EcuacionSerializer, EquipoHerramientaSerializer, GastosGeneralesAdministrativosSerializer, ManoDeObraSerializer, MaterialesSerializer, PermisoSerializer, RolPermisoSerializer, RolSerializer, UsuarioRolSerializer, UsuarioSerializer
 from rest_framework import viewsets
 
 # Create your views here.
@@ -104,8 +104,8 @@ class MaterialesViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 class ManoDeObraViewSet(viewsets.ModelViewSet):
-    queryset = Materiales.objects.all()
-    serializer_class = MaterialesSerializer
+    queryset = ManoDeObra.objects.all()
+    serializer_class = ManoDeObraSerializer
 
     def create(self, request, *args, **kwargs):
         return super().create(request, *args, **kwargs)
@@ -118,22 +118,8 @@ class ManoDeObraViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)    
 
 class EquipoHerramientaViewSet(viewsets.ModelViewSet):
-    queryset = Materiales.objects.all()
-    serializer_class = MaterialesSerializer
-
-    def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
-    
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)
-
-class EquipoHerramientaViewSet(viewsets.ModelViewSet):
-    queryset = Materiales.objects.all()
-    serializer_class = MaterialesSerializer
+    queryset = EquipoHerramienta.objects.all()
+    serializer_class = EquipoHerramientaSerializer
 
     def create(self, request, *args, **kwargs):
         return super().create(request, *args, **kwargs)
@@ -146,8 +132,8 @@ class EquipoHerramientaViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 class EcuacionViewSet(viewsets.ModelViewSet):
-    queryset = Materiales.objects.all()
-    serializer_class = MaterialesSerializer
+    queryset = Ecuacion.objects.all()
+    serializer_class = EcuacionSerializer
 
     def create(self, request, *args, **kwargs):
         return super().create(request, *args, **kwargs)
@@ -160,8 +146,8 @@ class EcuacionViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)    
 
 class GastosGeneralesViewSet(viewsets.ModelViewSet):
-    queryset = Materiales.objects.all()
-    serializer_class = MaterialesSerializer
+    queryset = GastosGeneralesAdministrativos.objects.all()
+    serializer_class = GastosGeneralesAdministrativosSerializer
 
     def create(self, request, *args, **kwargs):
         return super().create(request, *args, **kwargs)
