@@ -1,6 +1,6 @@
 from django.urls import path,include
 from rest_framework.routers import DefaultRouter
-from .views import RolViewSet
+from .views import LoginView, RolViewSet
 
 from . import views
 ruter = DefaultRouter()
@@ -19,4 +19,6 @@ ruter.register(r'gastos', views.GastosGeneralesViewSet)
 
 urlpatterns = [
     path('', include(ruter.urls)),
+    path('login/', LoginView.as_view(), name='login'),
+
 ]

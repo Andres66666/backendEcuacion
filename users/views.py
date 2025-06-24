@@ -1,9 +1,63 @@
 from django.shortcuts import render
 from .models import Categorias, Ecuacion, EquipoHerramienta, GastosGeneralesAdministrativos, ManoDeObra, Materiales, Permiso, Rol, RolPermiso, Usuario, UsuarioRol
-from .serializers import  CategoriasSerializer, EcuacionSerializer, EquipoHerramientaSerializer, GastosGeneralesAdministrativosSerializer, ManoDeObraSerializer, MaterialesSerializer, PermisoSerializer, RolPermisoSerializer, RolSerializer, UsuarioRolSerializer, UsuarioSerializer
+from .serializers import  CategoriasSerializer, EcuacionSerializer, EquipoHerramientaSerializer, GastosGeneralesAdministrativosSerializer, LoginSerializer, ManoDeObraSerializer, MaterialesSerializer, PermisoSerializer, RolPermisoSerializer, RolSerializer, UsuarioRolSerializer, UsuarioSerializer
 from rest_framework import viewsets
+from rest_framework import viewsets, status
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from django.db.models import Prefetch
+from django.contrib.auth.hashers import  check_password
+from rest_framework_simplejwt.tokens import RefreshToken
 
-# Create your views here.
+
+class LoginView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request):
+        serializer = LoginSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        correo = serializer.validated_data.get('correo')
+        password = serializer.validated_data.get('password')
+
+        try:
+            usuario = Usuario.objects.prefetch_related(
+                Prefetch('usuariorol_set', queryset=UsuarioRol.objects.select_related('rol')),
+                Prefetch('usuariorol_set__rol__rolpermiso_set', queryset=RolPermiso.objects.select_related('permiso'))
+            ).get(correo=correo)
+
+            if not usuario.estado:
+                return Response({'error': 'No puedes iniciar sesión. Contacte al administrador.'}, status=status.HTTP_403_FORBIDDEN)
+
+            if not check_password(password, usuario.password):
+                return Response({'error': 'Credenciales incorrectas'}, status=status.HTTP_400_BAD_REQUEST)
+
+            refresh = RefreshToken.for_user(usuario)
+            access_token = str(refresh.access_token)
+
+            roles = [rel.rol.nombre for rel in usuario.usuariorol_set.all()]
+            permisos = []
+            for rel in usuario.usuariorol_set.all():
+                permisos += [rp.permiso.nombre for rp in rel.rol.rolpermiso_set.all()]
+
+            if not roles or not permisos:
+                return Response({'error': 'El usuario no tiene roles ni permisos asignados.'}, status=status.HTTP_403_FORBIDDEN)
+
+            return Response({
+                'access_token': access_token,
+                'roles': roles,
+                'permisos': permisos,
+                'nombre': usuario.nombre,
+                'apellido': usuario.apellido,
+                'imagen_url': usuario.imagen_url,
+                'usuario_id': usuario.id
+            }, status=status.HTTP_200_OK)
+
+        except Usuario.DoesNotExist:
+            return Response({'error': 'Usuario no encontrado'}, status=status.HTTP_404_NOT_FOUND)
 
 class RolViewSet(viewsets.ModelViewSet):
     queryset = Rol.objects.all()

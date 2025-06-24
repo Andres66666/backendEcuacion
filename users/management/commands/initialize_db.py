@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth.hashers import make_password
-from users.models import Rol, Permiso, Usuario, UsuarioRolSucursal, RolPermiso, Sucursal, Categoria
+from users.models import Rol, Permiso, Usuario, UsuarioRol, RolPermiso, Categorias
 from datetime import date
 
 class Command(BaseCommand):
@@ -9,99 +9,47 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         self.stdout.write("Inicializando base de datos...")
 
-        # --- CREAR SUCURSAL POR DEFECTO ---
-        sucursal_default, _ = Sucursal.objects.get_or_create(
-            nombre="Sucursal Principal",
-            defaults={
-                'direccion': 'Dirección principal',
-                'estado': True
-            }
-        )
-
         # --- CREAR ROLES ---
-        admin_role, _ = Rol.objects.get_or_create(
-            nombre="Administrador",
-            defaults={'estado': True}
-        )
-        empleado_role, _ = Rol.objects.get_or_create(
-            nombre="Empleado",
-            defaults={'estado': True}
-        )
+        admin_role, _ = Rol.objects.get_or_create(nombre="Administrador", defaults={'estado': True})
+        empleado_role, _ = Rol.objects.get_or_create(nombre="Empleado", defaults={'estado': True})
 
         # --- CREAR PERMISOS ---
         permisos_data = [
-            {"nombre": "vender"},
-            {"nombre": "GestiónDeUsuarios"},
-            {"nombre": "GestionDeProductos"},
-            {"nombre": "GestionDeReportes"},
-            {"nombre": "listarSucursal"},
-            {"nombre": "listarRol"},
-            {"nombre": "listarPermiso"},
-            {"nombre": "listarUsuario"},
-            {"nombre": "listarUsuarioRolSucursal"},
-            {"nombre": "listarRolPermiso"},
-            {"nombre": "listarCategoria"},
-            {"nombre": "listarProductoMadera"},
-            {"nombre": "listarVenta"},
-            {"nombre": "listarDetalleVenta"},
-            {"nombre": "listarFacturaRecibo"},
-            {"nombre": "reportesgrafica"},
-            {"nombre": "reportes"},
+            "GestionDeUsuarios",
+            "GestionDeProductos",
+            "GestionDeReportes",
+            "ListarRoles",
+            "ListarPermisos",
+            "ListarUsuarios",
+            "ListarUsuarioRol",
+            "ListarRolPermiso",
         ]
 
         permisos_objetos = {}
-        for permiso in permisos_data:
-            p, _ = Permiso.objects.get_or_create(
-                nombre=permiso["nombre"],
-                defaults={
-                    'estado': True
-                }
-            )
-            permisos_objetos[permiso["nombre"]] = p
+        for nombre_permiso in permisos_data:
+            p, _ = Permiso.objects.get_or_create(nombre=nombre_permiso, defaults={'estado': True})
+            permisos_objetos[nombre_permiso] = p
 
         # --- ASIGNAR PERMISOS A ROLES ---
-        permisos_admin = [permiso["nombre"] for permiso in permisos_data]
+        for permiso in permisos_objetos.values():
+            RolPermiso.objects.get_or_create(rol=admin_role, permiso=permiso)
 
-        permisos_empleado = [
-            "vender", "GestionDeProductos",
-            "listarVenta", "listarDetalleVenta", "listarFacturaRecibo"
-        ]
-
-        for permiso_nombre in permisos_admin:
-            RolPermiso.objects.get_or_create(
-                rol=admin_role,
-                permiso=permisos_objetos[permiso_nombre]
-            )
-
-        for permiso_nombre in permisos_empleado:
-            RolPermiso.objects.get_or_create(
-                rol=empleado_role,
-                permiso=permisos_objetos[permiso_nombre]
-            )
-
-        # --- CREAR CATEGORÍAS ---
         # --- CREAR CATEGORÍAS ---
         categorias_data = [
             {"nombre": "Tabla", "descripcion": "Categoría para tablas"},
-            {"nombre": "Liston", "descripcion": "Categoría para listones (sin tilde)"},
+            {"nombre": "Listón", "descripcion": "Categoría para listones"},
             {"nombre": "Ripa", "descripcion": "Categoría para ripas"},
             {"nombre": "Mueble", "descripcion": "Categoría para muebles"},
             {"nombre": "Tijera", "descripcion": "Categoría para tijeras"},
         ]
 
-        for categoria in categorias_data:
-            Categoria.objects.get_or_create(
-                nombre=categoria["nombre"],
-                defaults={
-                    'descripcion': categoria["descripcion"],
-                    'estado': True
-                }
+        for cat in categorias_data:
+            Categorias.objects.get_or_create(
+                nombre=cat["nombre"],
+                defaults={'descripcion': cat["descripcion"], 'estado': True}
             )
 
-
         # --- CREAR USUARIOS ---
-
-        # Usuario Administrador
         admin_user, created_admin = Usuario.objects.get_or_create(
             ci="13247291",
             defaults={
@@ -112,20 +60,13 @@ class Command(BaseCommand):
                 'correo': "benitoandrescalle035@gmail.com",
                 'password': make_password("Andres1234*"),
                 'estado': True,
-                'imagen_url': "http://res.cloudinary.com/dlrpns8z7/image/upload/v1743595809/fnsesmm80hgwelhyzaie.jpg"
+                'imagen_url': "https://res.cloudinary.com/dlrpns8z7/image/upload/v1743595809/fnsesmm80hgwelhyzaie.jpg"
             }
         )
-
         if created_admin:
             self.stdout.write(f"Usuario administrador creado: {admin_user}")
+        UsuarioRol.objects.get_or_create(usuario=admin_user, rol=admin_role)
 
-        UsuarioRolSucursal.objects.get_or_create(
-            usuario=admin_user,
-            rol=admin_role,
-            sucursal=sucursal_default
-        )
-
-        # Usuario Empleado
         empleado_user, created_empleado = Usuario.objects.get_or_create(
             ci="87654321",
             defaults={
@@ -136,20 +77,15 @@ class Command(BaseCommand):
                 'correo': "juanperez@example.com",
                 'password': make_password("Empleado123*"),
                 'estado': True,
-                'imagen_url': "http://res.cloudinary.com/dlrpns8z7/image/upload/v1743595809/sample-image.jpg"
+                'imagen_url': "https://res.cloudinary.com/dlrpns8z7/image/upload/v1743595809/sample-image.jpg"
             }
         )
-
         if created_empleado:
             self.stdout.write(f"Usuario empleado creado: {empleado_user}")
-
-        UsuarioRolSucursal.objects.get_or_create(
-            usuario=empleado_user,
-            rol=empleado_role,
-            sucursal=sucursal_default
-        )
+        UsuarioRol.objects.get_or_create(usuario=empleado_user, rol=empleado_role)
 
         self.stdout.write(self.style.SUCCESS("Base de datos inicializada exitosamente!"))
+
 
         # --- INSTRUCCIONES ---
         # Ejecutar en terminal:

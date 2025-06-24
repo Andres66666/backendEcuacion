@@ -113,7 +113,6 @@ class Ecuacion(models.Model):
 
 
 # === GASTOS GENERALES Y ADMINISTRATIVOS ===
-
 class GastosGeneralesAdministrativos(models.Model):
     ecuacion = models.ForeignKey(Ecuacion, on_delete=models.CASCADE) # recuperar el total de 1
     gastos_generales = models.DecimalField(max_digits=5, decimal_places=2)
