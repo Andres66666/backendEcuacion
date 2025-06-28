@@ -10,9 +10,10 @@ from django.contrib.auth.hashers import  check_password
 from rest_framework_simplejwt.tokens import RefreshToken
 
 
+
 class LoginView(APIView):
-    authentication_classes = []
-    permission_classes = []
+    authentication_classes = []  # Eliminamos la autenticación para esta vista
+    permission_classes = []      # Sin permisos especiales
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
@@ -30,7 +31,9 @@ class LoginView(APIView):
             ).get(correo=correo)
 
             if not usuario.estado:
-                return Response({'error': 'No puedes iniciar sesión. Contacte al administrador.'}, status=status.HTTP_403_FORBIDDEN)
+                return Response({
+                    'error': 'No puedes iniciar sesión. Comuníquese con el administrador. Gracias.'
+                }, status=status.HTTP_403_FORBIDDEN)
 
             if not check_password(password, usuario.password):
                 return Response({'error': 'Credenciales incorrectas'}, status=status.HTTP_400_BAD_REQUEST)
@@ -38,10 +41,10 @@ class LoginView(APIView):
             refresh = RefreshToken.for_user(usuario)
             access_token = str(refresh.access_token)
 
-            roles = [rel.rol.nombre for rel in usuario.usuariorol_set.all()]
+            roles = [usuario_rol.rol.nombre for usuario_rol in usuario.usuariorol_set.all()]
             permisos = []
-            for rel in usuario.usuariorol_set.all():
-                permisos += [rp.permiso.nombre for rp in rel.rol.rolpermiso_set.all()]
+            for usuario_rol in usuario.usuariorol_set.all():
+                permisos += [rp.permiso.nombre for rp in usuario_rol.rol.rolpermiso_set.all()]
 
             if not roles or not permisos:
                 return Response({'error': 'El usuario no tiene roles ni permisos asignados.'}, status=status.HTTP_403_FORBIDDEN)
@@ -50,7 +53,7 @@ class LoginView(APIView):
                 'access_token': access_token,
                 'roles': roles,
                 'permisos': permisos,
-                'nombre': usuario.nombre,
+                'nombre_usuario': usuario.nombre,
                 'apellido': usuario.apellido,
                 'imagen_url': usuario.imagen_url,
                 'usuario_id': usuario.id

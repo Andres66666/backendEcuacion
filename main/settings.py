@@ -38,8 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    'rest_framework',
     'corsheaders',
+    'rest_framework',
     'rest_framework_simplejwt',
     'users',
 ]
@@ -54,6 +54,7 @@ REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -72,6 +73,7 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
+                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
@@ -138,28 +140,6 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-import cloudinary
-import cloudinary.uploader
-from cloudinary.utils import cloudinary_url
-
-# Configuration       
-cloudinary.config( 
-    cloud_name = "dexggkhkd", 
-    api_key = "778854599355299", 
-    api_secret = "5BtDFOJR4WAS8mQamqyJtGw6v8M", # Click 'View API Keys' above to copy your API secret
-    secure=True
-)
-#CLOUDINARY_URL=cloudinary://778854599355299:5BtDFOJR4WAS8mQamqyJtGw6v8M@dexggkhkd
-# Upload an image
-upload_result = cloudinary.uploader.upload("https://res.cloudinary.com/demo/image/upload/getting-started/shoes.jpg",
-                                           public_id="shoes")
-print(upload_result["secure_url"])
-
-# Optimize delivery by resizing and applying auto-format and auto-quality
-optimize_url, _ = cloudinary_url("shoes", fetch_format="auto", quality="auto")
-print(optimize_url)
-
-# Transform the image: auto-crop to square aspect_ratio
-auto_crop_url, _ = cloudinary_url("shoes", width=500, height=500, crop="auto", gravity="auto")
-print(auto_crop_url)
+CORS_ALLOWED_ORIGINS = [
+       "http://localhost:4200",
+   ]

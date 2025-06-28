@@ -1,17 +1,11 @@
 
 
 # Create your models here.
+from decimal import Decimal
 from django.db import models
+from django.contrib.auth.hashers import make_password
 
 # === MODELOS DE USUARIO, ROL Y PERMISO ===
-
-class Permiso(models.Model):
-    nombre = models.CharField(max_length=100)
-    estado = models.BooleanField(default=True)
-
-    def __str__(self):
-        return self.nombre
-
 
 class Rol(models.Model):
     nombre = models.CharField(max_length=100)
@@ -20,6 +14,13 @@ class Rol(models.Model):
     def __str__(self):
         return self.nombre
 
+
+class Permiso(models.Model):
+    nombre = models.CharField(max_length=100)
+    estado = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.nombre
 
 class Usuario(models.Model):
     nombre = models.CharField(max_length=100)
@@ -33,6 +34,12 @@ class Usuario(models.Model):
     fecha_actualizacion = models.DateTimeField(auto_now=True)
     imagen_url = models.URLField(max_length=500, null=True, blank=True)
     estado = models.BooleanField(default=True)
+
+    def save(self, *args, **kwargs):
+        # Solo volver a encriptar si la contraseña ha cambiado
+        if 'pbkdf2' not in self.password:
+            self.password = make_password(self.password)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.nombre} {self.apellido}"
@@ -55,7 +62,6 @@ class RolPermiso(models.Model):
 
 
 # === MODELOS DE CATEGORIZACIÓN Y COSTOS ===
-
 class Categorias(models.Model):
     nombre = models.CharField(max_length=100)
     descripcion = models.TextField()

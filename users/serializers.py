@@ -10,8 +10,8 @@ from .models import (
 # Serializers existentes (los de Rol, Permiso, Usuario, UsuarioRol, RolPermiso)
 # Los mantenemos como ya los tienes.
 class LoginSerializer(serializers.Serializer):
-    correo = serializers.EmailField(max_length=100, required=True)
-    password = serializers.CharField(max_length=255, required=True)
+    correo = serializers.EmailField(max_length=100, required=False, allow_null=True)
+    password = serializers.CharField(max_length=255, required=True)  
     
 class RolSerializer(serializers.ModelSerializer):
     class Meta:
