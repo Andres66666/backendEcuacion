@@ -1,3 +1,4 @@
+import cloudinary
 from django.shortcuts import render
 from .models import Categorias, Ecuacion, EquipoHerramienta, GastosGeneralesAdministrativos, ManoDeObra, Materiales, Permiso, Rol, RolPermiso, Usuario, UsuarioRol
 from .serializers import  CategoriasSerializer, EcuacionSerializer, EquipoHerramientaSerializer, GastosGeneralesAdministrativosSerializer, LoginSerializer, ManoDeObraSerializer, MaterialesSerializer, PermisoSerializer, RolPermisoSerializer, RolSerializer, UsuarioRolSerializer, UsuarioSerializer
@@ -8,6 +9,8 @@ from rest_framework.response import Response
 from django.db.models import Prefetch
 from django.contrib.auth.hashers import  check_password
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework import status
+from cloudinary import uploader
 
 
 
@@ -75,6 +78,7 @@ class RolViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+    
 
 class PermisoViewSet(viewsets.ModelViewSet):
     queryset = Permiso.objects.all()
@@ -91,47 +95,182 @@ class PermisoViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 class UsuarioViewSet(viewsets.ModelViewSet):
-    queryset = Usuario.objects.all()
-    serializer_class = UsuarioSerializer
+        queryset = Usuario.objects.all()
+        serializer_class = UsuarioSerializer
 
-    def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
-    
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)
+        def create(self, request, *args, **kwargs):
+            data = request.data.copy()
+
+            # Subir la imagen a Cloudinary si se incluye
+            if 'imagen_url' in request.FILES:
+                try:
+                    uploaded_image = cloudinary.uploader.upload(request.FILES['imagen_url'])
+                    data['imagen_url'] = uploaded_image.get('url')
+                    print("Imagen subida correctamente:", data['imagen_url'])
+                except Exception as e:
+                    print("Error al subir imagen a Cloudinary:", e)
+                    return Response({'error': 'Error al subir imagen a Cloudinary'}, status=status.HTTP_400_BAD_REQUEST)
+
+            serializer = self.get_serializer(data=data)
+            if not serializer.is_valid():
+                print(serializer.errors)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        def update(self, request, *args, **kwargs):
+            instance = self.get_object()
+            data = request.data.copy()
+
+            print("Archivos recibidos:", request.FILES)
+
+            # Subir nueva imagen si se incluye
+            if 'imagen_url' in request.FILES:
+                try:
+                    uploaded_image = cloudinary.uploader.upload(request.FILES['imagen_url'])
+                    data['imagen_url'] = uploaded_image.get('url')
+                except Exception as e:
+                    print("Error al subir imagen:", e)
+                    return Response({'error': 'Error al subir imagen a Cloudinary'}, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                # Si no se sube una nueva imagen, mantener la actual
+                data['imagen_url'] = instance.imagen_url
+
+            # Eliminar el archivo si quedó por accidente
+            if 'imagen_url' in request.FILES:
+                del request._files['imagen_url']
+
+            serializer = self.get_serializer(instance, data=data, partial=True)
+
+            if not serializer.is_valid():
+                print("Errores del serializer:", serializer.errors)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            serializer.save()
+            return Response(serializer.data)
+        
+
 
 class UsuarioRolViewSet(viewsets.ModelViewSet):
     queryset = UsuarioRol.objects.all()
     serializer_class = UsuarioRolSerializer
 
     def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
-    
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)
+        usuario = request.data.get('usuario')
+        rol = request.data.get('rol')
 
+        usuario_id = usuario.get('id') if isinstance(usuario, dict) else usuario
+        rol_id = rol.get('id') if isinstance(rol, dict) else rol
+
+        if UsuarioRol.objects.filter(usuario_id=usuario_id, rol_id=rol_id).exists():
+            return Response({'error': ['El usuario ya tiene este rol asignado']}, status=status.HTTP_400_BAD_REQUEST)
+
+        usuario_rol = UsuarioRol.objects.create(usuario_id=usuario_id, rol_id=rol_id)
+        return Response(UsuarioRolSerializer(usuario_rol).data, status=status.HTTP_201_CREATED)
+
+    def update(self, request, pk=None):
+        instance = self.get_object()
+
+        usuario_raw = request.data.get('usuario')
+        rol_raw = request.data.get('rol')
+
+        usuario_id = usuario_raw.get('id') if isinstance(usuario_raw, dict) else usuario_raw
+        rol_id = rol_raw.get('id') if isinstance(rol_raw, dict) else rol_raw
+
+        if UsuarioRol.objects.filter(usuario_id=usuario_id, rol_id=rol_id).exclude(pk=instance.pk).exists():
+            return Response({'error': ['El usuario ya tiene este rol asignado']}, status=status.HTTP_400_BAD_REQUEST)
+
+        instance.usuario_id = usuario_id
+        instance.rol_id = rol_id
+        instance.save()
+
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
 
 class RolPermisoViewSet(viewsets.ModelViewSet):
     queryset = RolPermiso.objects.all()
     serializer_class = RolPermisoSerializer
 
     def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
-    
-    def update(self, request, *args, **kwargs):
+        rol_id = request.data.get('rol')
+        permiso_id = request.data.get('permiso')
+
+        # Verificar si ya existe la relación entre rol y permiso
+        if RolPermiso.objects.filter(rol_id=rol_id, permiso_id=permiso_id).exists():
+            return Response({'error': ['Este rol ya tiene este permiso asignado']}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Crear la relación
+        roles_permisos = RolPermiso.objects.create(rol_id=rol_id, permiso_id=permiso_id)
+        return Response(RolPermisoSerializer(roles_permisos).data, status=status.HTTP_201_CREATED)
+
+    def update(self, request, pk=None):
         instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
+
+        rol = request.data.get('rol')
+        permiso = request.data.get('permiso')
+
+        # Si vienen como objetos (dict), extraer el ID; si ya son IDs, usarlos directamente
+        rol_id = rol.get('id') if isinstance(rol, dict) else rol or instance.rol_id
+        permiso_id = permiso.get('id') if isinstance(permiso, dict) else permiso or instance.permiso_id
+
+        # Verificar duplicidad
+        if RolPermiso.objects.filter(rol_id=rol_id, permiso_id=permiso_id).exclude(pk=instance.pk).exists():
+            return Response({'error': ['Este rol ya tiene este permiso asignado']}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Actualizar
+        instance.rol_id = rol_id
+        instance.permiso_id = permiso_id
+        instance.save()
+
+        serializer = self.get_serializer(instance)
         return Response(serializer.data)
+
+
+""" usuario auto creado  """
+class ClienteViewSet(viewsets.ModelViewSet):
+    queryset = Usuario.objects.all()
+    serializer_class = UsuarioSerializer
+
+    def create(self, request, *args, **kwargs):
+        data = request.data.copy()
+
+        # Subir imagen si se incluye (tu lógica original)
+        if 'imagen_url' in request.FILES:
+            try:
+                uploaded_image = cloudinary.uploader.upload(request.FILES['imagen_url'])
+                data['imagen_url'] = uploaded_image.get('url')
+            except Exception as e:
+                return Response({'error': 'Error al subir imagen a Cloudinary'}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = self.get_serializer(data=data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        usuario = serializer.save()
+
+        # Asignar rol 'Cliente' por defecto
+        try:
+            rol_cliente = Rol.objects.get(nombre='Cliente')
+        except Rol.DoesNotExist:
+            return Response({'error': 'Rol "Cliente" no encontrado'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Asignar permiso básico 'servicios' (ajusta el nombre según tu modelo)
+        try:
+            permiso_servicios = Permiso.objects.get(nombre='servicios')
+        except Permiso.DoesNotExist:
+            return Response({'error': 'Permiso "servicios" no encontrado'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            # Crear relación UsuarioRol si no existe
+        usuario_rol, created = UsuarioRol.objects.get_or_create(usuario=usuario, rol=rol_cliente)
+
+        # Crear relación RolPermiso si no existe (para que el rol tenga el permiso)
+        rol_permiso, created = RolPermiso.objects.get_or_create(rol=rol_cliente, permiso=permiso_servicios)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+
+
+
 
 class CategoriasViewSet(viewsets.ModelViewSet):
     queryset = Categorias.objects.all()
