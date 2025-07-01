@@ -16,7 +16,7 @@ class Command(BaseCommand):
         # --- CREAR PERMISOS ---
         permisos_data = [
             "GestionDeUsuarios",
-            "GestionDeProductos",
+            "GestionDeCatastro",
             "GestionDeReportes",
             "ListarRoles",
             "ListarPermisos",
