@@ -2,6 +2,7 @@
 
 # Create your models here.
 from decimal import Decimal
+import uuid
 from django.db import models
 from django.contrib.auth.hashers import make_password
 
@@ -126,3 +127,28 @@ class GastosGeneralesAdministrativos(models.Model):
 
     def __str__(self):
         return f"Gastos Generales #{self.id}"
+
+
+class IdentificadorGeneral(models.Model):
+    id_general = models.AutoField(primary_key=True)
+    NombreProyecto = models.CharField(max_length=255, unique=True)
+    def __str__(self):
+        return f"Registro #{self.id_general}"
+
+class GastoOperacion(models.Model):
+    identificador = models.ForeignKey(IdentificadorGeneral,on_delete=models.CASCADE, null=False)
+    descripcion = models.CharField(max_length=255)
+    unidad = models.CharField(max_length=50)
+    cantidad = models.DecimalField(max_digits=10, decimal_places=2)
+    precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
+    precio_literal = models.CharField(max_length=255, blank=True, null=True)
+    costo_parcial = models.DecimalField(max_digits=12, decimal_places=2, editable=False)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    ultima_modificacion = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        self.costo_parcial = (self.cantidad or Decimal("0")) * (self.precio_unitario or Decimal("0"))
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.descripcion} ({self.cantidad} {self.unidad} @ {self.precio_unitario})"

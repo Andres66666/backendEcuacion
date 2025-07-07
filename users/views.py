@@ -1,7 +1,7 @@
 import cloudinary
 from django.shortcuts import render
-from .models import Categorias, Ecuacion, EquipoHerramienta, GastosGeneralesAdministrativos, ManoDeObra, Materiales, Permiso, Rol, RolPermiso, Usuario, UsuarioRol
-from .serializers import  CategoriasSerializer, EcuacionSerializer, EquipoHerramientaSerializer, GastosGeneralesAdministrativosSerializer, LoginSerializer, ManoDeObraSerializer, MaterialesSerializer, PermisoSerializer, RolPermisoSerializer, RolSerializer, UsuarioRolSerializer, UsuarioSerializer
+from .models import Categorias, Ecuacion, EquipoHerramienta, GastoOperacion, GastosGeneralesAdministrativos, IdentificadorGeneral, ManoDeObra, Materiales, Permiso, Rol, RolPermiso, Usuario, UsuarioRol
+from .serializers import  CategoriasSerializer, EcuacionSerializer, EquipoHerramientaSerializer, GastoOperacionSerializer, GastosGeneralesAdministrativosSerializer, IdentificadorGeneralSerializer, LoginSerializer, ManoDeObraSerializer, MaterialesSerializer, PermisoSerializer, RolPermisoSerializer, RolSerializer, UsuarioRolSerializer, UsuarioSerializer
 from rest_framework import viewsets
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
@@ -354,3 +354,91 @@ class GastosGeneralesViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+class IdentificadorInmuebleViewSet(viewsets.ModelViewSet):
+    queryset = IdentificadorGeneral.objects.all()
+    serializer_class = IdentificadorGeneralSerializer
+
+    def create(self, request, *args, **kwargs):
+        nombre_proyecto = request.data.get('NombreProyecto', '').strip()
+
+        if not nombre_proyecto:
+            return Response({'error': 'El campo NombreProyecto es obligatorio.'}, status=400)
+
+        # Verificar si ya existe un proyecto con ese nombre
+        existente = IdentificadorGeneral.objects.filter(NombreProyecto__iexact=nombre_proyecto).first()
+        if existente:
+            return Response({
+                'mensaje': 'Ya existe un proyecto con este nombre.',
+                'id_general': existente.id_general,
+                'NombreProyecto': existente.NombreProyecto
+            }, status=200)
+
+        # Crear si no existe
+        return super().create(request, *args, **kwargs)
+
+class GastoOperacionViewSet(viewsets.ModelViewSet):
+    queryset = GastoOperacion.objects.all()
+    serializer_class = GastoOperacionSerializer
+
+    def create(self, request, *args, **kwargs):
+        data = request.data
+        print("Data recibida:", data)
+        
+        if not isinstance(data, list):
+            return Response({"error": "Se espera una lista de ítems."}, status=400)
+
+        # Intentar usar el identificador existente si se proporciona
+        identificador_id = None
+        if data and isinstance(data[0], dict) and 'identificador' in data[0]:
+            identificador_data = data[0]['identificador']
+            if isinstance(identificador_data, dict) and 'id_general' in identificador_data:
+                identificador_id = identificador_data['id_general']
+        
+        if identificador_id:
+            try:
+                identificador = IdentificadorGeneral.objects.get(id_general=identificador_id)
+            except IdentificadorGeneral.DoesNotExist:
+                return Response({"error": "Identificador proporcionado no existe."}, status=400)
+        else:
+            identificador = IdentificadorGeneral.objects.create()
+        
+        print("Identificador usado:", identificador.id_general)
+
+        gastos_guardados = []
+        for item in data:
+            item_copy = item.copy()
+            if 'identificador' in item_copy:
+                del item_copy['identificador']
+
+            serializer = self.get_serializer(data=item_copy)
+            serializer.is_valid(raise_exception=True)
+            gasto = serializer.save(identificador=identificador)
+            gastos_guardados.append(self.get_serializer(gasto).data)
+
+        return Response({
+            "mensaje": "Gastos creados correctamente.",
+            "identificador_general": identificador.id_general,
+            "gastos": gastos_guardados
+        }, status=status.HTTP_201_CREATED)
+
+    
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        identificador_id = self.request.query_params.get('identificador', None)
+        if identificador_id is not None:
+            queryset = queryset.filter(identificador__id_general=identificador_id)  # Filtrar por el ID del identificador
+        return queryset
+
+

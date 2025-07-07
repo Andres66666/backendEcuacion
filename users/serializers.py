@@ -2,7 +2,7 @@
 
 from rest_framework import serializers
 from .models import (
-    Rol, Permiso, Usuario, RolPermiso, UsuarioRol,
+    GastoOperacion, IdentificadorGeneral, Rol, Permiso, Usuario, RolPermiso, UsuarioRol,
     Categorias, Materiales, ManoDeObra, EquipoHerramienta,
     Ecuacion, GastosGeneralesAdministrativos
 )
@@ -88,4 +88,15 @@ class GastosGeneralesAdministrativosSerializer(serializers.ModelSerializer):
         model = GastosGeneralesAdministrativos
         fields = '__all__'
 
+class IdentificadorGeneralSerializer(serializers.ModelSerializer):
+    class Meta:
+        model =  IdentificadorGeneral
+        fields = '__all__'
+
+class GastoOperacionSerializer(serializers.ModelSerializer):
+    identificador = IdentificadorGeneralSerializer(read_only=True)  # Asegúrate de que esto esté aquí
+
+    class Meta:
+        model = GastoOperacion
+        fields = '__all__'  # O especifica los campos que deseas incluir
 

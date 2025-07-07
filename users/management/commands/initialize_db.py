@@ -23,6 +23,10 @@ class Command(BaseCommand):
             "ListarUsuarios",
             "ListarUsuarioRol",
             "ListarRolPermiso",
+            "Operaciones",  # Nuevo permiso
+            "Ecuacion",     # Nuevo permiso
+            "PrecioFactura", # Nuevo permiso
+            "GastosOperaciones" # Nuevo permiso
         ]
 
         permisos_objetos = {}
@@ -77,7 +81,6 @@ class Command(BaseCommand):
             self.stdout.write(f"✅ Usuario empleado creado: {empleado_user}")
 
         self.stdout.write(self.style.SUCCESS("🎉 ¡Base de datos RBAC inicializada exitosamente!"))
-
 
         # --- INSTRUCCIONES ---
         # Ejecutar en terminal:

@@ -20,6 +20,9 @@ router.register(r'mano_de_obra', views.ManoDeObraViewSet)
 router.register(r'equipo_herramienta', views.EquipoHerramientaViewSet)
 router.register(r'ecuacion', views.EcuacionViewSet)
 router.register(r'gastos', views.GastosGeneralesViewSet)
+router.register(r'GastosOperaciones',views.GastoOperacionViewSet)
+router.register(r'IDGeneral',views.IdentificadorInmuebleViewSet)
+
 
 urlpatterns = [
     path('', include(router.urls)),
