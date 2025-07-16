@@ -72,62 +72,12 @@ class Categorias(models.Model):
         return self.nombre
 
 
-# === MODELOS DE COSTOS DIRECTOS ===
-
-class Materiales(models.Model):
-    unidad = models.CharField(max_length=50)
-    cantidad = models.DecimalField(max_digits=10, decimal_places=2)
-    precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
-    total = models.DecimalField(max_digits=12, decimal_places=2)
-
-    def __str__(self):
-        return f"{self.unidad} - {self.total}"
 
 
-class ManoDeObra(models.Model):
-    unidad = models.CharField(max_length=50)
-    cantidad = models.DecimalField(max_digits=10, decimal_places=2)
-    precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
-    carga_social = models.DecimalField(max_digits=5, decimal_places=2)
-    impuestos_iva = models.DecimalField(max_digits=5, decimal_places=2)
-    total = models.DecimalField(max_digits=12, decimal_places=2)
 
-    def __str__(self):
-        return f"{self.unidad} - {self.total}"
-
-
-class EquipoHerramienta(models.Model):
-    unidad = models.CharField(max_length=50)
-    cantidad = models.DecimalField(max_digits=10, decimal_places=2)
-    precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
-    herramientas = models.DecimalField(max_digits=5, decimal_places=2)
-    total = models.DecimalField(max_digits=12, decimal_places=2)
-
-    def __str__(self):
-        return f"{self.unidad} - {self.total}"
-
-
-# === MODELO DE ECUACIÓN / CÁLCULO ===
-
-class Ecuacion(models.Model):
-    materiales = models.ForeignKey(Materiales, on_delete=models.CASCADE)
-    mano_de_obra = models.ForeignKey(ManoDeObra, on_delete=models.CASCADE)
-    quipo_herramienta = models.ForeignKey(EquipoHerramienta, on_delete=models.CASCADE)
-    subtotal = models.DecimalField(max_digits=12, decimal_places=2)
-
-    def __str__(self):
-        return f"Ecuación #{self.id}"
-
-
-# === GASTOS GENERALES Y ADMINISTRATIVOS ===
-class GastosGeneralesAdministrativos(models.Model):
-    ecuacion = models.ForeignKey(Ecuacion, on_delete=models.CASCADE) # recuperar el total de 1
-    gastos_generales = models.DecimalField(max_digits=5, decimal_places=2)
-    total = models.DecimalField(max_digits=12, decimal_places=2)
-
-    def __str__(self):
-        return f"Gastos Generales #{self.id}"
-
+# =====================================================
+# === De aqui adelante empieza toda la operaciones  ===
+# =====================================================
 
 class IdentificadorGeneral(models.Model):
     id_general = models.AutoField(primary_key=True)
@@ -152,3 +102,58 @@ class GastoOperacion(models.Model):
 
     def __str__(self):
         return f"{self.descripcion} ({self.cantidad} {self.unidad} @ {self.precio_unitario})"
+
+# =====================================================
+# === =============  seccion 2   === ==================
+# =====================================================
+# agregar el identificador genegeral del registro que esta en gasto de operaciones 
+# este identificador tiene que ser repidos en las tres tabalas 
+# materiales 
+# mano de obra
+# equipos herrmientas 
+class Materiales(models.Model):
+    unidad = models.CharField(max_length=50)
+    cantidad = models.DecimalField(max_digits=10, decimal_places=2)
+    precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
+    total = models.DecimalField(max_digits=12, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.unidad} - {self.total}"
+class ManoDeObra(models.Model):
+    unidad = models.CharField(max_length=50)
+    cantidad = models.DecimalField(max_digits=10, decimal_places=2)
+    precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
+    carga_social = models.DecimalField(max_digits=5, decimal_places=2)
+    impuestos_iva = models.DecimalField(max_digits=5, decimal_places=2)
+    total = models.DecimalField(max_digits=12, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.unidad} - {self.total}"
+
+class EquipoHerramienta(models.Model):
+    unidad = models.CharField(max_length=50)
+    cantidad = models.DecimalField(max_digits=10, decimal_places=2)
+    precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
+    herramientas = models.DecimalField(max_digits=5, decimal_places=2)
+    total = models.DecimalField(max_digits=12, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.unidad} - {self.total}"
+
+# === MODELO DE ECUACIÓN / CÁLCULO ===
+class Ecuacion(models.Model):
+    materiales = models.ForeignKey(Materiales, on_delete=models.CASCADE)
+    mano_de_obra = models.ForeignKey(ManoDeObra, on_delete=models.CASCADE)
+    quipo_herramienta = models.ForeignKey(EquipoHerramienta, on_delete=models.CASCADE)
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2)
+
+    def __str__(self):
+        return f"Ecuación #{self.id}"
+# === GASTOS GENERALES Y ADMINISTRATIVOS ===
+class GastosGeneralesAdministrativos(models.Model):
+    ecuacion = models.ForeignKey(Ecuacion, on_delete=models.CASCADE) # recuperar el total de 1
+    gastos_generales = models.DecimalField(max_digits=5, decimal_places=2)
+    total = models.DecimalField(max_digits=12, decimal_places=2)
+
+    def __str__(self):
+        return f"Gastos Generales #{self.id}"
