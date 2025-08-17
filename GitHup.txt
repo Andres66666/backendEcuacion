@@ -7,18 +7,36 @@ Panel de control\Todos los elementos de Panel de control\Administrador de creden
 
 📦 RESUMEN RÁPIDO (puro comandos)
 
-git config --global user.name "TuNombreDeUsuarioGitHub"
-git config --global user.email "tu_correo@example.com"
+
+git config --global user.name "Andrés66666"
+git config --global user.email "cya2024773@est.univalle.edu"
 
 git init
 git status
 git add .
 git commit -m "Primer commit"
 
-git remote add origin https://github.com/TuUsuario/TuRepositorio.git
+git remote add origin https://github.com/Andres66666/FrontendEcuacion.git
 git push -u origin main
 
 
 
 
 ⚡ ¡Y listo, tu proyecto estará en GitHub! ⚡
+
+
+
+echo "# FrontendEcuacion" >> README.md
+git init
+git add README.md
+git commit -m "first commit"
+git branch -M main
+git remote add origin https://github.com/Andres66666/FrontendEcuacion.git
+git push -u origin main
+
+
+
+
+git remote add origin https://github.com/Andres66666/FrontendEcuacion.git
+git branch -M main
+git push -u origin main
