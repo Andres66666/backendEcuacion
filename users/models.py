@@ -1,28 +1,24 @@
-
-
 # Create your models here.
 from decimal import Decimal
 import uuid
 from django.db import models
 from django.contrib.auth.hashers import make_password
 
-# === MODELOS DE USUARIO, ROL Y PERMISO ===
-
+# =====================================================
+# === =============  seccion 1   === ==================
+# =====================================================
 class Rol(models.Model):
     nombre = models.CharField(max_length=100)
     estado = models.BooleanField(default=True)
 
     def __str__(self):
         return self.nombre
-
-
 class Permiso(models.Model):
     nombre = models.CharField(max_length=100)
     estado = models.BooleanField(default=True)
 
     def __str__(self):
         return self.nombre
-
 class Usuario(models.Model):
     nombre = models.CharField(max_length=100)
     apellido = models.CharField(max_length=100)
@@ -45,7 +41,6 @@ class Usuario(models.Model):
     def __str__(self):
         return f"{self.nombre} {self.apellido}"
 
-
 class UsuarioRol(models.Model):
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
     rol = models.ForeignKey(Rol, on_delete=models.CASCADE)
@@ -61,27 +56,27 @@ class RolPermiso(models.Model):
     class Meta:
         unique_together = ('rol', 'permiso')
 
-
-# === MODELOS DE CATEGORIZACIÓN Y COSTOS ===
-class Categorias(models.Model):
-    nombre = models.CharField(max_length=100)
-    descripcion = models.TextField()
-    estado = models.BooleanField(default=True)
-
-    def __str__(self):
-        return self.nombre
-
-
-
-
-
 # =====================================================
-# === De aqui adelante empieza toda la operaciones  ===
+# === =============  seccion 2   === ==================
 # =====================================================
 
 class IdentificadorGeneral(models.Model):
     id_general = models.AutoField(primary_key=True)
     NombreProyecto = models.CharField(max_length=255, unique=True)
+    carga_social = models.DecimalField(max_digits=5, decimal_places=2)
+    impuestos_iva = models.DecimalField(max_digits=5, decimal_places=2)
+    herramientas = models.DecimalField(max_digits=5, decimal_places=2)
+    gastos_generales = models.DecimalField(max_digits=5, decimal_places=2)
+    iva_efectiva = models.DecimalField(max_digits=5, decimal_places=2)
+    it = models.DecimalField(max_digits=5, decimal_places=2)
+    iue = models.DecimalField(max_digits=5, decimal_places=2)
+    ganancia = models.DecimalField(max_digits=5, decimal_places=2)
+    a_costo_venta = models.DecimalField(max_digits=5, decimal_places=2)
+    b_margen_utilidad = models.DecimalField(max_digits=5, decimal_places=2)
+    porcentaje_global_100 = models.DecimalField(max_digits=5, decimal_places=2)
+
+
+
     def __str__(self):
         return f"Registro #{self.id_general}"
 
@@ -104,14 +99,11 @@ class GastoOperacion(models.Model):
         return f"{self.descripcion} ({self.cantidad} {self.unidad} @ {self.precio_unitario})"
 
 # =====================================================
-# === =============  seccion 2   === ==================
+# === =============  seccion 3   === ==================
 # =====================================================
-# agregar el identificador genegeral del registro que esta en gasto de operaciones 
-# este identificador tiene que ser repidos en las tres tabalas 
-# materiales 
-# mano de obra
-# equipos herrmientas 
 class Materiales(models.Model):
+    id_gasto_operacion  = models.ForeignKey(GastoOperacion, on_delete=models.CASCADE)
+    descripcion = models.CharField(max_length=255)
     unidad = models.CharField(max_length=50)
     cantidad = models.DecimalField(max_digits=10, decimal_places=2)
     precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
@@ -119,41 +111,37 @@ class Materiales(models.Model):
 
     def __str__(self):
         return f"{self.unidad} - {self.total}"
+    
 class ManoDeObra(models.Model):
+    id_gasto_operacion  = models.ForeignKey(GastoOperacion, on_delete=models.CASCADE)
+    descripcion = models.CharField(max_length=255)
     unidad = models.CharField(max_length=50)
     cantidad = models.DecimalField(max_digits=10, decimal_places=2)
     precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
-    carga_social = models.DecimalField(max_digits=5, decimal_places=2)
-    impuestos_iva = models.DecimalField(max_digits=5, decimal_places=2)
     total = models.DecimalField(max_digits=12, decimal_places=2)
 
     def __str__(self):
         return f"{self.unidad} - {self.total}"
 
 class EquipoHerramienta(models.Model):
+    id_gasto_operacion  = models.ForeignKey(GastoOperacion, on_delete=models.CASCADE)
+    descripcion = models.CharField(max_length=255)
     unidad = models.CharField(max_length=50)
     cantidad = models.DecimalField(max_digits=10, decimal_places=2)
     precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
-    herramientas = models.DecimalField(max_digits=5, decimal_places=2)
     total = models.DecimalField(max_digits=12, decimal_places=2)
 
     def __str__(self):
         return f"{self.unidad} - {self.total}"
 
-# === MODELO DE ECUACIÓN / CÁLCULO ===
-class Ecuacion(models.Model):
-    materiales = models.ForeignKey(Materiales, on_delete=models.CASCADE)
-    mano_de_obra = models.ForeignKey(ManoDeObra, on_delete=models.CASCADE)
-    quipo_herramienta = models.ForeignKey(EquipoHerramienta, on_delete=models.CASCADE)
-    subtotal = models.DecimalField(max_digits=12, decimal_places=2)
-
-    def __str__(self):
-        return f"Ecuación #{self.id}"
 # === GASTOS GENERALES Y ADMINISTRATIVOS ===
 class GastosGeneralesAdministrativos(models.Model):
-    ecuacion = models.ForeignKey(Ecuacion, on_delete=models.CASCADE) # recuperar el total de 1
-    gastos_generales = models.DecimalField(max_digits=5, decimal_places=2)
+    id_gasto_operacion  = models.ForeignKey(GastoOperacion, on_delete=models.CASCADE)
     total = models.DecimalField(max_digits=12, decimal_places=2)
 
     def __str__(self):
-        return f"Gastos Generales #{self.id}"
+         return f"{self.total}"
+
+# =====================================================
+# === =============  seccion 3   === ==================
+# =====================================================

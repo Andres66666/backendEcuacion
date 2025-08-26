@@ -1,14 +1,13 @@
 # serializers.py
-
 from rest_framework import serializers
 from .models import (
     GastoOperacion, IdentificadorGeneral, Rol, Permiso, Usuario, RolPermiso, UsuarioRol,
-    Categorias, Materiales, ManoDeObra, EquipoHerramienta,
-    Ecuacion, GastosGeneralesAdministrativos
+    Materiales, ManoDeObra, EquipoHerramienta,
+    GastosGeneralesAdministrativos
 )
-
-# Serializers existentes (los de Rol, Permiso, Usuario, UsuarioRol, RolPermiso)
-# Los mantenemos como ya los tienes.
+# =====================================================
+# === =============  seccion 1   === ==================
+# =====================================================
 class LoginSerializer(serializers.Serializer):
     correo = serializers.EmailField(max_length=100, required=False, allow_null=True)
     password = serializers.CharField(max_length=255, required=True)  
@@ -45,48 +44,9 @@ class RolPermisoSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-# === NUEVOS SERIALIZERS ===
-
-class CategoriasSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Categorias
-        fields = '__all__'
-
-
-class MaterialesSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Materiales
-        fields = '__all__'
-
-
-class ManoDeObraSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ManoDeObra
-        fields = '__all__'
-
-
-class EquipoHerramientaSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = EquipoHerramienta
-        fields = '__all__'
-
-
-class EcuacionSerializer(serializers.ModelSerializer):
-    materiales = MaterialesSerializer(read_only=True)
-    mano_de_obra = ManoDeObraSerializer(read_only=True)
-    quipo_herramienta = EquipoHerramientaSerializer(read_only=True)
-
-    class Meta:
-        model = Ecuacion
-        fields = '__all__'
-
-
-class GastosGeneralesAdministrativosSerializer(serializers.ModelSerializer):
-    ecuacion = EcuacionSerializer(read_only=True)
-
-    class Meta:
-        model = GastosGeneralesAdministrativos
-        fields = '__all__'
+# =====================================================
+# === =============  seccion 2   === ==================
+# =====================================================
 
 class IdentificadorGeneralSerializer(serializers.ModelSerializer):
     class Meta:
@@ -98,5 +58,31 @@ class GastoOperacionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GastoOperacion
-        fields = '__all__'  # O especifica los campos que deseas incluir
+        fields = '__all__'  
+
+# =====================================================
+# === =============  seccion 3   === ==================
+# =====================================================
+
+class MaterialesSerializer(serializers.ModelSerializer):
+    id_gasto_operacion = serializers.PrimaryKeyRelatedField(queryset=GastoOperacion.objects.all())
+    class Meta:
+        model = Materiales
+        fields = '__all__'
+class ManoDeObraSerializer(serializers.ModelSerializer):
+    id_gasto_operacion = serializers.PrimaryKeyRelatedField(queryset=GastoOperacion.objects.all())
+    class Meta:
+        model = ManoDeObra
+        fields = '__all__'
+class EquipoHerramientaSerializer(serializers.ModelSerializer):
+    id_gasto_operacion = serializers.PrimaryKeyRelatedField(queryset=GastoOperacion.objects.all())
+    class Meta:
+        model = EquipoHerramienta
+        fields = '__all__'
+class GastosGeneralesAdministrativosSerializer(serializers.ModelSerializer):
+    id_gasto_operacion = serializers.PrimaryKeyRelatedField(queryset=GastoOperacion.objects.all())
+    class Meta:
+        model = GastosGeneralesAdministrativos
+        fields = '__all__'
+
 

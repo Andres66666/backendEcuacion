@@ -1,7 +1,7 @@
 import cloudinary
 from django.shortcuts import render
-from .models import Categorias, Ecuacion, EquipoHerramienta, GastoOperacion, GastosGeneralesAdministrativos, IdentificadorGeneral, ManoDeObra, Materiales, Permiso, Rol, RolPermiso, Usuario, UsuarioRol
-from .serializers import  CategoriasSerializer, EcuacionSerializer, EquipoHerramientaSerializer, GastoOperacionSerializer, GastosGeneralesAdministrativosSerializer, IdentificadorGeneralSerializer, LoginSerializer, ManoDeObraSerializer, MaterialesSerializer, PermisoSerializer, RolPermisoSerializer, RolSerializer, UsuarioRolSerializer, UsuarioSerializer
+from .models import EquipoHerramienta, GastoOperacion, GastosGeneralesAdministrativos, IdentificadorGeneral, ManoDeObra, Materiales, Permiso, Rol, RolPermiso, Usuario, UsuarioRol
+from .serializers import   EquipoHerramientaSerializer, GastoOperacionSerializer, GastosGeneralesAdministrativosSerializer, IdentificadorGeneralSerializer, LoginSerializer, ManoDeObraSerializer, MaterialesSerializer, PermisoSerializer, RolPermisoSerializer, RolSerializer, UsuarioRolSerializer, UsuarioSerializer
 from rest_framework import viewsets
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
@@ -11,9 +11,16 @@ from django.contrib.auth.hashers import  check_password
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import status
 from cloudinary import uploader
+from django.db import models
+from decimal import Decimal, ROUND_HALF_UP
+from rest_framework.decorators import action
 
 
 
+
+# =====================================================
+# === =============  seccion 1   === ==================
+# =====================================================
 class LoginView(APIView):
     authentication_classes = []  # Eliminamos la autenticación para esta vista
     permission_classes = []      # Sin permisos especiales
@@ -79,7 +86,6 @@ class RolViewSet(viewsets.ModelViewSet):
         serializer.save()
         return Response(serializer.data)
     
-
 class PermisoViewSet(viewsets.ModelViewSet):
     queryset = Permiso.objects.all()
     serializer_class = PermisoSerializer
@@ -149,8 +155,6 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             serializer.save()
             return Response(serializer.data)
         
-
-
 class UsuarioRolViewSet(viewsets.ModelViewSet):
     queryset = UsuarioRol.objects.all()
     serializer_class = UsuarioRolSerializer
@@ -225,157 +229,45 @@ class RolPermisoViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
 
-
-""" usuario auto creado  """
-class ClienteViewSet(viewsets.ModelViewSet):
-    queryset = Usuario.objects.all()
-    serializer_class = UsuarioSerializer
-
-    def create(self, request, *args, **kwargs):
-        data = request.data.copy()
-
-        # Subir imagen si se incluye (tu lógica original)
-        if 'imagen_url' in request.FILES:
-            try:
-                uploaded_image = cloudinary.uploader.upload(request.FILES['imagen_url'])
-                data['imagen_url'] = uploaded_image.get('url')
-            except Exception as e:
-                return Response({'error': 'Error al subir imagen a Cloudinary'}, status=status.HTTP_400_BAD_REQUEST)
-
-        serializer = self.get_serializer(data=data)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        usuario = serializer.save()
-
-        # Asignar rol 'Cliente' por defecto
-        try:
-            rol_cliente = Rol.objects.get(nombre='Cliente')
-        except Rol.DoesNotExist:
-            return Response({'error': 'Rol "Cliente" no encontrado'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-        # Asignar permiso básico 'servicios' (ajusta el nombre según tu modelo)
-        try:
-            permiso_servicios = Permiso.objects.get(nombre='servicios')
-        except Permiso.DoesNotExist:
-            return Response({'error': 'Permiso "servicios" no encontrado'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-            # Crear relación UsuarioRol si no existe
-        usuario_rol, created = UsuarioRol.objects.get_or_create(usuario=usuario, rol=rol_cliente)
-
-        # Crear relación RolPermiso si no existe (para que el rol tenga el permiso)
-        rol_permiso, created = RolPermiso.objects.get_or_create(rol=rol_cliente, permiso=permiso_servicios)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-
-
-
-
-
-class CategoriasViewSet(viewsets.ModelViewSet):
-    queryset = Categorias.objects.all()
-    serializer_class = CategoriasSerializer
-
-    def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
-    
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)  
-class MaterialesViewSet(viewsets.ModelViewSet):
-    queryset = Materiales.objects.all()
-    serializer_class = MaterialesSerializer
-
-    def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
-    
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)
-
-class ManoDeObraViewSet(viewsets.ModelViewSet):
-    queryset = ManoDeObra.objects.all()
-    serializer_class = ManoDeObraSerializer
-
-    def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
-    
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)    
-
-class EquipoHerramientaViewSet(viewsets.ModelViewSet):
-    queryset = EquipoHerramienta.objects.all()
-    serializer_class = EquipoHerramientaSerializer
-
-    def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
-    
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)
-
-class EcuacionViewSet(viewsets.ModelViewSet):
-    queryset = Ecuacion.objects.all()
-    serializer_class = EcuacionSerializer
-
-    def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
-    
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)    
-
-class GastosGeneralesViewSet(viewsets.ModelViewSet):
-    queryset = GastosGeneralesAdministrativos.objects.all()
-    serializer_class = GastosGeneralesAdministrativosSerializer
-
-    def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
-    
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)
-
-class IdentificadorInmuebleViewSet(viewsets.ModelViewSet):
+# =====================================================
+# === =============  seccion 2   === ==================
+# =====================================================
+class IdentificadorGeneralViewSet(viewsets.ModelViewSet):
     queryset = IdentificadorGeneral.objects.all()
     serializer_class = IdentificadorGeneralSerializer
 
     def create(self, request, *args, **kwargs):
         nombre_proyecto = request.data.get('NombreProyecto', '').strip()
-
         if not nombre_proyecto:
             return Response({'error': 'El campo NombreProyecto es obligatorio.'}, status=400)
-
-        # Verificar si ya existe un proyecto con ese nombre
         existente = IdentificadorGeneral.objects.filter(NombreProyecto__iexact=nombre_proyecto).first()
         if existente:
             return Response({
                 'mensaje': 'Ya existe un proyecto con este nombre.',
                 'id_general': existente.id_general,
-                'NombreProyecto': existente.NombreProyecto
+                'NombreProyecto': existente.NombreProyecto,
+                'carga_social': existente.carga_social,
+                'impuestos_iva': existente.impuestos_iva,
+                'herramientas': existente.herramientas,
+                'gastos_generales': existente.gastos_generales,
+                'iva_efectiva': existente.iva_efectiva,
+                'it': existente.it,
+                'iue': existente.iue,
+                'ganancia': existente.ganancia,
+                'a_costo_venta': existente.a_costo_venta,
+                'b_margen_utilidad': existente.b_margen_utilidad,
+                'porcentaje_global_100': existente.porcentaje_global_100
             }, status=200)
-
         # Crear si no existe
         return super().create(request, *args, **kwargs)
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        identificador_id = self.request.query_params.get('identificador', None)
+        if identificador_id is not None:
+            queryset = queryset.filter(identificador__id_general=identificador_id)
+        return queryset
+
 
 class GastoOperacionViewSet(viewsets.ModelViewSet):
     queryset = GastoOperacion.objects.all()
@@ -440,5 +332,185 @@ class GastoOperacionViewSet(viewsets.ModelViewSet):
         if identificador_id is not None:
             queryset = queryset.filter(identificador__id_general=identificador_id)  # Filtrar por el ID del identificador
         return queryset
+
+# =====================================================
+# === =============  seccion 3   === ==================
+# =====================================================
+
+class MaterialesViewSet(viewsets.ModelViewSet):
+    queryset = Materiales.objects.all()
+    serializer_class = MaterialesSerializer
+    def create(self, request, *args, **kwargs):
+        id_gasto = request.data.get("id_gasto_operacion")
+        if id_gasto:
+            from .models import GastoOperacion
+            try:
+                gasto = GastoOperacion.objects.get(id=id_gasto)
+            except GastoOperacion.DoesNotExist:
+                return Response({"error": "GastoOperacion no encontrado"}, status=400)
+            request.data["id_gasto_operacion"] = gasto.id  
+        return super().create(request, *args, **kwargs)
+    
+    def update(self, request, *args, **kwargs):
+        id_gasto = request.data.get("id_gasto_operacion")
+        descripcion = request.data.get("descripcion")
+        nuevo_precio = request.data.get("precio_unitario")
+
+        if id_gasto:
+            try:
+                gasto = GastoOperacion.objects.get(id=id_gasto)
+            except GastoOperacion.DoesNotExist:
+                return Response({"error": "GastoOperacion no encontrado"}, status=400)
+            request.data["id_gasto_operacion"] = gasto.id  
+        response = super().update(request, *args, **kwargs)
+        if descripcion and nuevo_precio is not None:
+            Materiales.objects.filter(descripcion=descripcion).update(
+                precio_unitario=nuevo_precio,
+                total=models.F("cantidad") * nuevo_precio
+            )
+        return response
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        id_gasto = self.request.query_params.get('id_gasto_operacion')
+        if id_gasto:
+            queryset = queryset.filter(id_gasto_operacion=id_gasto)
+        return queryset
+
+
+class ManoDeObraViewSet(viewsets.ModelViewSet):
+    queryset = ManoDeObra.objects.all()
+    serializer_class = ManoDeObraSerializer
+
+    def create(self, request, *args, **kwargs):
+        id_gasto = request.data.get("id_gasto_operacion")
+        if id_gasto:
+            from .models import GastoOperacion
+            try:
+                gasto = GastoOperacion.objects.get(id=id_gasto)
+            except GastoOperacion.DoesNotExist:
+                return Response({"error": "GastoOperacion no encontrado"}, status=400)
+            request.data["id_gasto_operacion"] = gasto.id  
+        return super().create(request, *args, **kwargs)
+    
+    def update(self, request, *args, **kwargs):
+        id_gasto = request.data.get("id_gasto_operacion")
+        descripcion = request.data.get("descripcion")
+        nuevo_precio = request.data.get("precio_unitario")
+
+        if id_gasto:
+            try:
+                gasto = GastoOperacion.objects.get(id=id_gasto)
+            except GastoOperacion.DoesNotExist:
+                return Response({"error": "GastoOperacion no encontrado"}, status=400)
+            request.data["id_gasto_operacion"] = gasto.id  
+        response = super().update(request, *args, **kwargs)
+        if descripcion and nuevo_precio is not None:
+            Materiales.objects.filter(descripcion=descripcion).update(
+                precio_unitario=nuevo_precio,
+                total=models.F("cantidad") * nuevo_precio
+            )
+        return response
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        id_gasto = self.request.query_params.get('id_gasto_operacion')
+        if id_gasto:
+            queryset = queryset.filter(id_gasto_operacion=id_gasto)
+        return queryset
+ 
+
+class EquipoHerramientaViewSet(viewsets.ModelViewSet):
+    queryset = EquipoHerramienta.objects.all()
+    serializer_class = EquipoHerramientaSerializer
+
+    def create(self, request, *args, **kwargs):
+        id_gasto = request.data.get("id_gasto_operacion")
+        if id_gasto:
+            from .models import GastoOperacion
+            try:
+                gasto = GastoOperacion.objects.get(id=id_gasto)
+            except GastoOperacion.DoesNotExist:
+                return Response({"error": "GastoOperacion no encontrado"}, status=400)
+            request.data["id_gasto_operacion"] = gasto.id  
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        id_gasto = request.data.get("id_gasto_operacion")
+        descripcion = request.data.get("descripcion")
+        nuevo_precio = request.data.get("precio_unitario")
+
+        if id_gasto:
+            try:
+                gasto = GastoOperacion.objects.get(id=id_gasto)
+            except GastoOperacion.DoesNotExist:
+                return Response({"error": "GastoOperacion no encontrado"}, status=400)
+            request.data["id_gasto_operacion"] = gasto.id
+        response = super().update(request, *args, **kwargs)
+        if descripcion and nuevo_precio is not None:
+            Materiales.objects.filter(descripcion=descripcion).update(
+                precio_unitario=nuevo_precio,
+                total=models.F("cantidad") * nuevo_precio
+            )
+        return response
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        id_gasto = self.request.query_params.get("id_gasto_operacion")
+        if id_gasto:
+            queryset = queryset.filter(id_gasto_operacion=id_gasto)
+        return queryset
+
+class GastosGeneralesViewSet(viewsets.ModelViewSet):
+    queryset = GastosGeneralesAdministrativos.objects.all()
+    serializer_class = GastosGeneralesAdministrativosSerializer
+    def create(self, request, *args, **kwargs):
+        print("Datos recibidos:", request.data)
+        data = request.data.copy()
+        id_gasto = data.get("id_gasto_operacion")
+        if id_gasto:
+            try:
+                gasto_operacion = GastoOperacion.objects.get(id=id_gasto)
+                gasto_general = GastosGeneralesAdministrativos.objects.create(
+                    id_gasto_operacion=gasto_operacion,
+                    total=data.get('total', 0)
+                )
+                serializer = self.get_serializer(gasto_general)
+                return Response(serializer.data, status=201)
+            except GastoOperacion.DoesNotExist:
+                return Response({"error": "GastoOperacion no encontrado"}, status=400)
+            except Exception as e:
+                return Response({"error": str(e)}, status=400)
+        return Response({"error": "id_gasto_operacion es requerido"}, status=400)
+
+    def update(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            data = request.data.copy()
+            if 'id_gasto_operacion' in data:
+                try:
+                    gasto_operacion = GastoOperacion.objects.get(id=data['id_gasto_operacion'])
+                    instance.id_gasto_operacion = gasto_operacion
+                except GastoOperacion.DoesNotExist:
+                    return Response({"error": "GastoOperacion no encontrado"}, status=400)
+            if 'total' in data:
+                instance.total = float(data['total'])
+            instance.save()
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data)
+        except GastosGeneralesAdministrativos.DoesNotExist:
+            return Response({"error": "Registro no encontrado"}, status=404)
+        except Exception as e:
+            return Response({"error": str(e)}, status=400)
+
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        id_gasto = self.request.query_params.get("id_gasto_operacion")
+        if id_gasto:
+            queryset = queryset.filter(id_gasto_operacion=id_gasto)
+        return queryset
+  
+
 
 
