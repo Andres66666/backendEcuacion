@@ -17,6 +17,8 @@ git add .
 git commit -m "Primer commit"
 
 git remote add origin https://github.com/Andres66666/FrontendEcuacion.git
+git remote add origin https://github.com/Andres66666/backendEcuacion.git
+
 git push -u origin main
 
 
