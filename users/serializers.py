@@ -9,7 +9,7 @@ from .models import (
 # === =============  seccion 1   === ==================
 # =====================================================
 class LoginSerializer(serializers.Serializer):
-    correo = serializers.EmailField(max_length=100, required=False, allow_null=True)  # 👈 obligatorio
+    correo = serializers.EmailField(max_length=100, required=False, allow_null=True)
     password = serializers.CharField(max_length=255, required=True)  
 
     

@@ -30,7 +30,8 @@ SECRET_KEY = 'django-insecure-(fn$sd-g@*)51f7)nc!a^3xeb(ma^9f6pm02_a+2h6tw^251fq
 DEBUG = True
 
 
-ALLOWED_HOSTS = ["https://backendecuacion.onrender.com", "localhost"]
+ALLOWED_HOSTS = ["backendecuacion.onrender.com", "localhost", "127.0.0.1"]
+
 
 
 # Application definition
