@@ -103,8 +103,8 @@ WSGI_APPLICATION = 'main.wsgi.application'
         'HOST': 'localhost',
         'PORT': '5432',
     }
-}
- """
+} """
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
