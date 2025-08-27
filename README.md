@@ -10,7 +10,7 @@
     </td>
   </tr>
 </table>
-
+R de prueba 
 ---
 
 ## 🛠 Instalaciones realizadas
