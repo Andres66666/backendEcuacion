@@ -267,7 +267,38 @@ class IdentificadorGeneralViewSet(viewsets.ModelViewSet):
         if identificador_id is not None:
             queryset = queryset.filter(identificador__id_general=identificador_id)
         return queryset
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
 
+        # Importar modelos relacionados
+        from .models import (
+            GastoOperacion,
+            Materiales,
+            ManoDeObra,
+            EquipoHerramienta,
+            GastosGeneralesAdministrativos,
+        )
+
+        # Buscar todos los gastos asociados al proyecto
+        gastos = GastoOperacion.objects.filter(identificador=instance)
+
+        for gasto in gastos:
+            # Borrar hijos primero
+            Materiales.objects.filter(id_gasto_operacion=gasto).delete()
+            ManoDeObra.objects.filter(id_gasto_operacion=gasto).delete()
+            EquipoHerramienta.objects.filter(id_gasto_operacion=gasto).delete()
+            GastosGeneralesAdministrativos.objects.filter(id_gasto_operacion=gasto).delete()
+            # Luego borrar el gasto
+            gasto.delete()
+
+        # Finalmente borrar el proyecto
+        instance.delete()
+
+        return Response(
+            {"mensaje": "Proyecto y todos sus registros asociados fueron eliminados correctamente."},
+            status=status.HTTP_204_NO_CONTENT
+        )
 
 class GastoOperacionViewSet(viewsets.ModelViewSet):
     queryset = GastoOperacion.objects.all()
