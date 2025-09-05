@@ -1,7 +1,7 @@
 # serializers.py
 from rest_framework import serializers
 from .models import (
-    GastoOperacion, IdentificadorGeneral, Rol, Permiso, Usuario, RolPermiso, UsuarioRol,
+    GastoOperacion, Proyecto, Rol, Permiso, Usuario, RolPermiso, UsuarioRol,
     Materiales, ManoDeObra, EquipoHerramienta,
     GastosGeneralesAdministrativos
 )
@@ -49,13 +49,13 @@ class RolPermisoSerializer(serializers.ModelSerializer):
 # === =============  seccion 2   === ==================
 # =====================================================
 
-class IdentificadorGeneralSerializer(serializers.ModelSerializer):
+class ProyectoSerializer(serializers.ModelSerializer):
     class Meta:
-        model =  IdentificadorGeneral
+        model = Proyecto
         fields = '__all__'
 
 class GastoOperacionSerializer(serializers.ModelSerializer):
-    identificador = IdentificadorGeneralSerializer(read_only=True)  # Asegúrate de que esto esté aquí
+    identificador = ProyectoSerializer(read_only=True)  # Asegúrate de que esto esté aquí
 
     class Meta:
         model = GastoOperacion

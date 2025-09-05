@@ -1,7 +1,7 @@
 import cloudinary
 from django.shortcuts import render
-from .models import EquipoHerramienta, GastoOperacion, GastosGeneralesAdministrativos, IdentificadorGeneral, ManoDeObra, Materiales, Permiso, Rol, RolPermiso, Usuario, UsuarioRol
-from .serializers import   EquipoHerramientaSerializer, GastoOperacionSerializer, GastosGeneralesAdministrativosSerializer, IdentificadorGeneralSerializer, LoginSerializer, ManoDeObraSerializer, MaterialesSerializer, PermisoSerializer, RolPermisoSerializer, RolSerializer, UsuarioRolSerializer, UsuarioSerializer
+from .models import EquipoHerramienta, GastoOperacion, GastosGeneralesAdministrativos, Proyecto, ManoDeObra, Materiales, Permiso, Rol, RolPermiso, Usuario, UsuarioRol
+from .serializers import   EquipoHerramientaSerializer, GastoOperacionSerializer, GastosGeneralesAdministrativosSerializer, ProyectoSerializer, LoginSerializer, ManoDeObraSerializer, MaterialesSerializer, PermisoSerializer, RolPermisoSerializer, RolSerializer, UsuarioRolSerializer, UsuarioSerializer
 from rest_framework import viewsets
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
@@ -232,25 +232,25 @@ class RolPermisoViewSet(viewsets.ModelViewSet):
 # =====================================================
 # === =============  seccion 2   === ==================
 # =====================================================
-class IdentificadorGeneralViewSet(viewsets.ModelViewSet):
-    queryset = IdentificadorGeneral.objects.all()
-    serializer_class = IdentificadorGeneralSerializer
+class ProyectoViewSet(viewsets.ModelViewSet):
+    queryset = Proyecto.objects.all()
+    serializer_class = ProyectoSerializer
 
     def create(self, request, *args, **kwargs):
         nombre_proyecto = request.data.get('NombreProyecto', '').strip()
         if not nombre_proyecto:
             return Response({'error': 'El campo NombreProyecto es obligatorio.'}, status=400)
-        existente = IdentificadorGeneral.objects.filter(NombreProyecto__iexact=nombre_proyecto).first()
+        existente = Proyecto.objects.filter(NombreProyecto__iexact=nombre_proyecto).first()
         if existente:
             return Response({
                 'mensaje': 'Ya existe un proyecto con este nombre.',
                 'id_general': existente.id_general,
                 'NombreProyecto': existente.NombreProyecto,
                 'carga_social': existente.carga_social,
-                'impuestos_iva': existente.impuestos_iva,
+                'iva_efectiva': existente.iva_efectiva,
                 'herramientas': existente.herramientas,
                 'gastos_generales': existente.gastos_generales,
-                'iva_efectiva': existente.iva_efectiva,
+                'iva_tasa_nominal': existente.iva_tasa_nominal,
                 'it': existente.it,
                 'iue': existente.iue,
                 'ganancia': existente.ganancia,
@@ -279,7 +279,6 @@ class IdentificadorGeneralViewSet(viewsets.ModelViewSet):
             EquipoHerramienta,
             GastosGeneralesAdministrativos,
         )
-
         # Buscar todos los gastos asociados al proyecto
         gastos = GastoOperacion.objects.filter(identificador=instance)
 
@@ -320,12 +319,12 @@ class GastoOperacionViewSet(viewsets.ModelViewSet):
         
         if identificador_id:
             try:
-                identificador = IdentificadorGeneral.objects.get(id_general=identificador_id)
-            except IdentificadorGeneral.DoesNotExist:
+                identificador = Proyecto.objects.get(id_general=identificador_id)
+            except Proyecto.DoesNotExist:
                 return Response({"error": "Identificador proporcionado no existe."}, status=400)
         else:
-            identificador = IdentificadorGeneral.objects.create()
-        
+            identificador = Proyecto.objects.create()
+
         print("Identificador usado:", identificador.id_general)
 
         gastos_guardados = []
