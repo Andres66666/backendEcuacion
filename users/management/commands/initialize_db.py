@@ -40,7 +40,21 @@ class Command(BaseCommand):
             RolPermiso.objects.get_or_create(rol=admin_role, permiso=permiso)
 
         # Solo algunos permisos al rol Empleado
-        permisos_empleado = ["ListarUsuarios", "ListarPermisos"]
+        """ permisos_empleado = ["ListarUsuarios", "ListarPermisos"] """
+        permisos_empleado = [
+            "GestionDeUsuarios",
+            "GestionDeCatastro",
+            "GestionDeReportes",
+            "ListarRoles",
+            "ListarPermisos",
+            "ListarUsuarios",
+            "ListarUsuarioRol",
+            "ListarRolPermiso",
+            "Operaciones",  # Nuevo permiso
+            "Ecuacion",     # Nuevo permiso
+            "PrecioFactura", # Nuevo permiso
+            "GastosOperaciones" # Nuevo permiso
+        ]
         for nombre_permiso in permisos_empleado:
             RolPermiso.objects.get_or_create(rol=empleado_role, permiso=permisos_objetos[nombre_permiso])
 

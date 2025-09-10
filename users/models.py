@@ -74,9 +74,10 @@ class Proyecto(models.Model):
     a_costo_venta = models.DecimalField(max_digits=5, decimal_places=2)
     b_margen_utilidad = models.DecimalField(max_digits=5, decimal_places=2)
     porcentaje_global_100 = models.DecimalField(max_digits=5, decimal_places=2)
-
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True) 
+    creado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, related_name="Proyecto_creado")
+    modificado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True,  related_name="Proyecto_modificado")
 
 
     def __str__(self):
@@ -92,6 +93,8 @@ class GastoOperacion(models.Model):
     costo_parcial = models.DecimalField(max_digits=12, decimal_places=2, editable=False)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
+    creado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, related_name="Gastos_creados")
+    modificado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True,  related_name="Gastos_modificados")
     
 
     def save(self, *args, **kwargs):
@@ -113,6 +116,8 @@ class Materiales(models.Model):
     total = models.DecimalField(max_digits=12, decimal_places=2)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
+    creado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, related_name="materiales_creados")
+    modificado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True,  related_name="materiales_modificados")
 
     def __str__(self):
         return f"{self.unidad} - {self.total}"
@@ -126,6 +131,8 @@ class ManoDeObra(models.Model):
     total = models.DecimalField(max_digits=12, decimal_places=2)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
+    creado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, related_name="manos_creadas")
+    modificado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True,  related_name="manos_modificadas")
 
     def __str__(self):
         return f"{self.unidad} - {self.total}"
@@ -139,17 +146,20 @@ class EquipoHerramienta(models.Model):
     total = models.DecimalField(max_digits=12, decimal_places=2)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
+    creado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, related_name="equipos_creados")
+    modificado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True,  related_name="equipos_modificados")
 
     def __str__(self):
         return f"{self.unidad} - {self.total}"
 
 # === GASTOS GENERALES Y ADMINISTRATIVOS ===
-class GastosGeneralesAdministrativos(models.Model):
+class GastosGenerales(models.Model):
     id_gasto_operacion  = models.ForeignKey(GastoOperacion, on_delete=models.CASCADE)
     total = models.DecimalField(max_digits=12, decimal_places=2)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
-    creado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True)
-    
+    creado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, related_name="gastos_creados")
+    modificado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True,  related_name="gastos_modificados")
+
     def __str__(self):
          return f"{self.total}"

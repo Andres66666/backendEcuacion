@@ -1,7 +1,7 @@
 import cloudinary
 from django.shortcuts import render
-from .models import EquipoHerramienta, GastoOperacion, GastosGeneralesAdministrativos, Proyecto, ManoDeObra, Materiales, Permiso, Rol, RolPermiso, Usuario, UsuarioRol
-from .serializers import   EquipoHerramientaSerializer, GastoOperacionSerializer, GastosGeneralesAdministrativosSerializer, ProyectoSerializer, LoginSerializer, ManoDeObraSerializer, MaterialesSerializer, PermisoSerializer, RolPermisoSerializer, RolSerializer, UsuarioRolSerializer, UsuarioSerializer
+from .models import EquipoHerramienta, GastoOperacion, GastosGenerales, Proyecto, ManoDeObra, Materiales, Permiso, Rol, RolPermiso, Usuario, UsuarioRol
+from .serializers import   EquipoHerramientaSerializer, GastoOperacionSerializer, GastosGeneralesSerializer, ProyectoSerializer, LoginSerializer, ManoDeObraSerializer, MaterialesSerializer, PermisoSerializer, RolPermisoSerializer, RolSerializer, UsuarioRolSerializer, UsuarioSerializer
 from rest_framework import viewsets
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
@@ -15,7 +15,7 @@ from django.db import models
 from decimal import Decimal, ROUND_HALF_UP
 from rest_framework.decorators import action
 
-
+from decimal import Decimal, InvalidOperation
 
 
 # =====================================================
@@ -107,23 +107,26 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         def create(self, request, *args, **kwargs):
             data = request.data.copy()
 
-            # Subir la imagen a Cloudinary si se incluye
+            # Subir imagen si existe
             if 'imagen_url' in request.FILES:
                 try:
                     uploaded_image = cloudinary.uploader.upload(request.FILES['imagen_url'])
                     data['imagen_url'] = uploaded_image.get('url')
-                    print("Imagen subida correctamente:", data['imagen_url'])
                 except Exception as e:
-                    print("Error al subir imagen a Cloudinary:", e)
-                    return Response({'error': 'Error al subir imagen a Cloudinary'}, status=status.HTTP_400_BAD_REQUEST)
+                    return Response({'error': f'Error al subir imagen: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
 
+            # Crear usuario
             serializer = self.get_serializer(data=data)
-            if not serializer.is_valid():
-                print(serializer.errors)
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            serializer.is_valid(raise_exception=True)
+            usuario = serializer.save()
 
+            # 👉 Asignar rol automáticamente si viene en el request
+            rol_id = request.data.get('rol')
+            if rol_id:
+                UsuarioRol.objects.create(usuario=usuario, rol_id=rol_id)
+
+            return Response(serializer.data, status=status.HTTP_201_CREATED)    
+           
         def update(self, request, *args, **kwargs):
             instance = self.get_object()
             data = request.data.copy()
@@ -235,32 +238,82 @@ class RolPermisoViewSet(viewsets.ModelViewSet):
 class ProyectoViewSet(viewsets.ModelViewSet):
     queryset = Proyecto.objects.all()
     serializer_class = ProyectoSerializer
-
     def create(self, request, *args, **kwargs):
-        nombre_proyecto = request.data.get('NombreProyecto', '').strip()
-        if not nombre_proyecto:
-            return Response({'error': 'El campo NombreProyecto es obligatorio.'}, status=400)
-        existente = Proyecto.objects.filter(NombreProyecto__iexact=nombre_proyecto).first()
-        if existente:
-            return Response({
-                'mensaje': 'Ya existe un proyecto con este nombre.',
-                'id_general': existente.id_general,
-                'NombreProyecto': existente.NombreProyecto,
-                'carga_social': existente.carga_social,
-                'iva_efectiva': existente.iva_efectiva,
-                'herramientas': existente.herramientas,
-                'gastos_generales': existente.gastos_generales,
-                'iva_tasa_nominal': existente.iva_tasa_nominal,
-                'it': existente.it,
-                'iue': existente.iue,
-                'ganancia': existente.ganancia,
-                'a_costo_venta': existente.a_costo_venta,
-                'b_margen_utilidad': existente.b_margen_utilidad,
-                'porcentaje_global_100': existente.porcentaje_global_100
-            }, status=200)
-        # Crear si no existe
-        return super().create(request, *args, **kwargs)
-    
+        data = request.data.copy()
+        try:
+            nombre_proyecto = data.get('NombreProyecto', '').strip()
+            if not nombre_proyecto:
+                return Response({'error': 'El campo NombreProyecto es obligatorio.'}, status=400)
+
+            existente = Proyecto.objects.filter(NombreProyecto__iexact=nombre_proyecto).first()
+            if existente:
+                return Response({
+                    'mensaje': 'Ya existe un proyecto con este nombre.',
+                    'id_general': existente.id_general,
+                    'NombreProyecto': existente.NombreProyecto,
+                    'carga_social': existente.carga_social,
+                    'iva_efectiva': existente.iva_efectiva,
+                    'herramientas': existente.herramientas,
+                    'gastos_generales': existente.gastos_generales,
+                    'iva_tasa_nominal': existente.iva_tasa_nominal,
+                    'it': existente.it,
+                    'iue': existente.iue,
+                    'ganancia': existente.ganancia,
+                    'a_costo_venta': existente.a_costo_venta,
+                    'b_margen_utilidad': existente.b_margen_utilidad,
+                    'porcentaje_global_100': existente.porcentaje_global_100
+                }, status=200)
+
+            id_usuario = data.get("creado_por")
+            usuario = Usuario.objects.get(id=id_usuario) if id_usuario else None
+
+            proyecto = Proyecto.objects.create(
+                NombreProyecto=nombre_proyecto,
+                carga_social=data.get("carga_social", 0),
+                iva_efectiva=data.get("iva_efectiva", 0),
+                herramientas=data.get("herramientas", 0),
+                gastos_generales=data.get("gastos_generales", 0),
+                iva_tasa_nominal=data.get("iva_tasa_nominal", 0),
+                it=data.get("it", 0),
+                iue=data.get("iue", 0),
+                ganancia=data.get("ganancia", 0),
+                a_costo_venta=data.get("a_costo_venta", 0),
+                b_margen_utilidad=data.get("b_margen_utilidad", 0),
+                porcentaje_global_100=data.get("porcentaje_global_100", 0),
+                creado_por=usuario,
+                modificado_por=usuario
+            )
+
+            serializer = self.get_serializer(proyecto)
+            return Response(serializer.data, status=201)
+
+        except Usuario.DoesNotExist:
+            return Response({"error": "Usuario no encontrado"}, status=400)
+
+    def update(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            data = request.data.copy()
+
+            for field in [
+                "NombreProyecto", "carga_social", "iva_efectiva", "herramientas", "gastos_generales",
+                "iva_tasa_nominal", "it", "iue", "ganancia", "a_costo_venta",
+                "b_margen_utilidad", "porcentaje_global_100"
+            ]:
+                if field in data:
+                    setattr(instance, field, data[field])
+
+            if "modificado_por" in data:
+                usuario = Usuario.objects.get(id=data["modificado_por"])
+                instance.modificado_por = usuario
+
+            instance.save()
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data)
+
+        except Usuario.DoesNotExist:
+            return Response({"error": "Usuario no encontrado"}, status=400)
+        
     def get_queryset(self):
         queryset = super().get_queryset()
         identificador_id = self.request.query_params.get('identificador', None)
@@ -302,41 +355,45 @@ class ProyectoViewSet(viewsets.ModelViewSet):
 class GastoOperacionViewSet(viewsets.ModelViewSet):
     queryset = GastoOperacion.objects.all()
     serializer_class = GastoOperacionSerializer
-
     def create(self, request, *args, **kwargs):
         data = request.data
-        print("Data recibida:", data)
-        
         if not isinstance(data, list):
             return Response({"error": "Se espera una lista de ítems."}, status=400)
 
-        # Intentar usar el identificador existente si se proporciona
         identificador_id = None
         if data and isinstance(data[0], dict) and 'identificador' in data[0]:
             identificador_data = data[0]['identificador']
             if isinstance(identificador_data, dict) and 'id_general' in identificador_data:
                 identificador_id = identificador_data['id_general']
-        
+
         if identificador_id:
             try:
                 identificador = Proyecto.objects.get(id_general=identificador_id)
             except Proyecto.DoesNotExist:
                 return Response({"error": "Identificador proporcionado no existe."}, status=400)
         else:
-            identificador = Proyecto.objects.create()
-
-        print("Identificador usado:", identificador.id_general)
+            return Response({"error": "Debe proporcionar un proyecto válido"}, status=400)
 
         gastos_guardados = []
         for item in data:
-            item_copy = item.copy()
-            if 'identificador' in item_copy:
-                del item_copy['identificador']
+            try:
+                id_usuario = item.get("creado_por")
+                usuario = Usuario.objects.get(id=id_usuario) if id_usuario else None
 
-            serializer = self.get_serializer(data=item_copy)
-            serializer.is_valid(raise_exception=True)
-            gasto = serializer.save(identificador=identificador)
-            gastos_guardados.append(self.get_serializer(gasto).data)
+                gasto = GastoOperacion.objects.create(
+                    identificador=identificador,
+                    descripcion=item.get("descripcion"),
+                    unidad=item.get("unidad"),
+                    cantidad=item.get("cantidad", 0),
+                    precio_unitario=item.get("precio_unitario", 0),
+                    precio_literal=item.get("precio_literal"),
+                    creado_por=usuario,
+                    modificado_por=usuario
+                )
+                gastos_guardados.append(self.get_serializer(gasto).data)
+
+            except Usuario.DoesNotExist:
+                return Response({"error": "Usuario no encontrado"}, status=400)
 
         return Response({
             "mensaje": "Gastos creados correctamente.",
@@ -344,13 +401,41 @@ class GastoOperacionViewSet(viewsets.ModelViewSet):
             "gastos": gastos_guardados
         }, status=status.HTTP_201_CREATED)
 
-    
     def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)
+        try:
+            instance = self.get_object()
+            data = request.data.copy()
+
+            for field in ["descripcion", "unidad", "cantidad", "precio_unitario", "precio_literal"]:
+                if field in data:
+                    if field in ["cantidad", "precio_unitario"] and data[field] is not None:
+                        try:
+                            setattr(instance, field, Decimal(str(data[field])))
+                        except Exception:
+                            return Response({"error": f"Valor inválido para {field}"}, status=400)
+                    else:
+                        setattr(instance, field, data[field])
+
+            if "modificado_por" in data:
+                usuario = Usuario.objects.get(id=data["modificado_por"])
+                instance.modificado_por = usuario
+
+            instance.save()
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data)
+
+        except Usuario.DoesNotExist:
+            return Response({"error": "Usuario no encontrado"}, status=400)
+    
+    
+    def save(self, *args, **kwargs):
+        try:
+            cantidad = Decimal(str(self.cantidad or "0"))
+            precio = Decimal(str(self.precio_unitario or "0"))
+            self.costo_parcial = cantidad * precio
+        except (InvalidOperation, TypeError, ValueError):
+            self.costo_parcial = Decimal("0")
+        super().save(*args, **kwargs)
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         instance.delete()
@@ -370,119 +455,244 @@ class GastoOperacionViewSet(viewsets.ModelViewSet):
 class MaterialesViewSet(viewsets.ModelViewSet):
     queryset = Materiales.objects.all()
     serializer_class = MaterialesSerializer
-    def create(self, request, *args, **kwargs):
-        id_gasto = request.data.get("id_gasto_operacion")
-        if id_gasto:
-            from .models import GastoOperacion
-            try:
-                gasto = GastoOperacion.objects.get(id=id_gasto)
-            except GastoOperacion.DoesNotExist:
-                return Response({"error": "GastoOperacion no encontrado"}, status=400)
-            request.data["id_gasto_operacion"] = gasto.id  
-        return super().create(request, *args, **kwargs)
-    
-    def update(self, request, *args, **kwargs):
-        id_gasto = request.data.get("id_gasto_operacion")
-        descripcion = request.data.get("descripcion")
-        nuevo_precio = request.data.get("precio_unitario")
 
-        if id_gasto:
-            try:
-                gasto = GastoOperacion.objects.get(id=id_gasto)
-            except GastoOperacion.DoesNotExist:
-                return Response({"error": "GastoOperacion no encontrado"}, status=400)
-            request.data["id_gasto_operacion"] = gasto.id  
-        response = super().update(request, *args, **kwargs)
-        if descripcion and nuevo_precio is not None:
-            Materiales.objects.filter(descripcion=descripcion).update(
-                precio_unitario=nuevo_precio,
-                total=models.F("cantidad") * nuevo_precio
+    def create(self, request, *args, **kwargs):
+        data = request.data.copy()
+        try:
+            id_gasto = data.get("id_gasto_operacion")
+            id_usuario = data.get("creado_por")
+
+            if not id_gasto:
+                return Response({"error": "id_gasto_operacion es requerido"}, status=400)
+
+            gasto_operacion = GastoOperacion.objects.get(id=id_gasto)
+            usuario = Usuario.objects.get(id=id_usuario) if id_usuario else None
+
+            material = Materiales.objects.create(
+                id_gasto_operacion=gasto_operacion,
+                descripcion=data.get("descripcion"),
+                unidad=data.get("unidad"),
+                cantidad=data.get("cantidad", 0),
+                precio_unitario=data.get("precio_unitario", 0),
+                total=data.get("total", 0),
+                creado_por=usuario
             )
-        return response
-    
+
+            serializer = self.get_serializer(material)
+            return Response(serializer.data, status=201)
+
+        except GastoOperacion.DoesNotExist:
+            return Response({"error": "GastoOperacion no encontrado"}, status=400)
+        except Usuario.DoesNotExist:
+            return Response({"error": "Usuario no encontrado"}, status=400)
+        except Exception as e:
+            return Response({"error": str(e)}, status=400)
+
+    def update(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            data = request.data.copy()
+
+            if "id_gasto_operacion" in data:
+                gasto_operacion = GastoOperacion.objects.get(id=data["id_gasto_operacion"])
+                instance.id_gasto_operacion = gasto_operacion
+
+            if "descripcion" in data:
+                instance.descripcion = data["descripcion"]
+
+            if "unidad" in data:
+                instance.unidad = data["unidad"]
+
+            if "cantidad" in data:
+                instance.cantidad = data["cantidad"]
+
+            if "precio_unitario" in data:
+                instance.precio_unitario = data["precio_unitario"]
+
+            if "total" in data:
+                instance.total = data["total"]
+
+            # 👇 Solo se actualiza el modificado_por
+            if "modificado_por" in data:
+                usuario = Usuario.objects.get(id=data["modificado_por"])
+                instance.modificado_por = usuario
+
+            instance.save()
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data)
+
+        except GastoOperacion.DoesNotExist:
+            return Response({"error": "GastoOperacion no encontrado"}, status=400)
+        except Usuario.DoesNotExist:
+            return Response({"error": "Usuario no encontrado"}, status=400)
+        except Exception as e:
+            return Response({"error": str(e)}, status=400)
+
     def get_queryset(self):
         queryset = super().get_queryset()
-        id_gasto = self.request.query_params.get('id_gasto_operacion')
+        id_gasto = self.request.query_params.get("id_gasto_operacion")
         if id_gasto:
             queryset = queryset.filter(id_gasto_operacion=id_gasto)
         return queryset
-
 
 class ManoDeObraViewSet(viewsets.ModelViewSet):
     queryset = ManoDeObra.objects.all()
     serializer_class = ManoDeObraSerializer
 
     def create(self, request, *args, **kwargs):
-        id_gasto = request.data.get("id_gasto_operacion")
-        if id_gasto:
-            from .models import GastoOperacion
-            try:
-                gasto = GastoOperacion.objects.get(id=id_gasto)
-            except GastoOperacion.DoesNotExist:
-                return Response({"error": "GastoOperacion no encontrado"}, status=400)
-            request.data["id_gasto_operacion"] = gasto.id  
-        return super().create(request, *args, **kwargs)
-    
-    def update(self, request, *args, **kwargs):
-        id_gasto = request.data.get("id_gasto_operacion")
-        descripcion = request.data.get("descripcion")
-        nuevo_precio = request.data.get("precio_unitario")
+        data = request.data.copy()
+        try:
+            id_gasto = data.get("id_gasto_operacion")
+            id_usuario = data.get("creado_por")
 
-        if id_gasto:
-            try:
-                gasto = GastoOperacion.objects.get(id=id_gasto)
-            except GastoOperacion.DoesNotExist:
-                return Response({"error": "GastoOperacion no encontrado"}, status=400)
-            request.data["id_gasto_operacion"] = gasto.id  
-        response = super().update(request, *args, **kwargs)
-        if descripcion and nuevo_precio is not None:
-            Materiales.objects.filter(descripcion=descripcion).update(
-                precio_unitario=nuevo_precio,
-                total=models.F("cantidad") * nuevo_precio
+            if not id_gasto:
+                return Response({"error": "id_gasto_operacion es requerido"}, status=400)
+
+            gasto_operacion = GastoOperacion.objects.get(id=id_gasto)
+            usuario = Usuario.objects.get(id=id_usuario) if id_usuario else None
+
+            mano = ManoDeObra.objects.create(
+                id_gasto_operacion=gasto_operacion,
+                descripcion=data.get("descripcion"),
+                unidad=data.get("unidad"),
+                cantidad=data.get("cantidad", 0),
+                precio_unitario=data.get("precio_unitario", 0),
+                total=data.get("total", 0),
+                creado_por=usuario
             )
-        return response
-    
+
+            serializer = self.get_serializer(mano)
+            return Response(serializer.data, status=201)
+
+        except GastoOperacion.DoesNotExist:
+            return Response({"error": "GastoOperacion no encontrado"}, status=400)
+        except Usuario.DoesNotExist:
+            return Response({"error": "Usuario no encontrado"}, status=400)
+        except Exception as e:
+            return Response({"error": str(e)}, status=400)
+
+    def update(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            data = request.data.copy()
+
+            if "id_gasto_operacion" in data:
+                gasto_operacion = GastoOperacion.objects.get(id=data["id_gasto_operacion"])
+                instance.id_gasto_operacion = gasto_operacion
+
+            if "descripcion" in data:
+                instance.descripcion = data["descripcion"]
+
+            if "unidad" in data:
+                instance.unidad = data["unidad"]
+
+            if "cantidad" in data:
+                instance.cantidad = data["cantidad"]
+
+            if "precio_unitario" in data:
+                instance.precio_unitario = data["precio_unitario"]
+
+            if "total" in data:
+                instance.total = data["total"]
+
+            if "modificado_por" in data:
+                usuario = Usuario.objects.get(id=data["modificado_por"])
+                instance.modificado_por = usuario
+
+            instance.save()
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data)
+
+        except GastoOperacion.DoesNotExist:
+            return Response({"error": "GastoOperacion no encontrado"}, status=400)
+        except Usuario.DoesNotExist:
+            return Response({"error": "Usuario no encontrado"}, status=400)
+        except Exception as e:
+            return Response({"error": str(e)}, status=400)
+
     def get_queryset(self):
         queryset = super().get_queryset()
-        id_gasto = self.request.query_params.get('id_gasto_operacion')
+        id_gasto = self.request.query_params.get("id_gasto_operacion")
         if id_gasto:
             queryset = queryset.filter(id_gasto_operacion=id_gasto)
         return queryset
- 
+
+
 
 class EquipoHerramientaViewSet(viewsets.ModelViewSet):
     queryset = EquipoHerramienta.objects.all()
     serializer_class = EquipoHerramientaSerializer
 
     def create(self, request, *args, **kwargs):
-        id_gasto = request.data.get("id_gasto_operacion")
-        if id_gasto:
-            from .models import GastoOperacion
-            try:
-                gasto = GastoOperacion.objects.get(id=id_gasto)
-            except GastoOperacion.DoesNotExist:
-                return Response({"error": "GastoOperacion no encontrado"}, status=400)
-            request.data["id_gasto_operacion"] = gasto.id  
-        return super().create(request, *args, **kwargs)
+        data = request.data.copy()
+        try:
+            id_gasto = data.get("id_gasto_operacion")
+            id_usuario = data.get("creado_por")
+
+            if not id_gasto:
+                return Response({"error": "id_gasto_operacion es requerido"}, status=400)
+
+            gasto_operacion = GastoOperacion.objects.get(id=id_gasto)
+            usuario = Usuario.objects.get(id=id_usuario) if id_usuario else None
+
+            equipo = EquipoHerramienta.objects.create(
+                id_gasto_operacion=gasto_operacion,
+                descripcion=data.get("descripcion"),
+                unidad=data.get("unidad"),
+                cantidad=data.get("cantidad", 0),
+                precio_unitario=data.get("precio_unitario", 0),
+                total=data.get("total", 0),
+                creado_por=usuario
+            )
+
+            serializer = self.get_serializer(equipo)
+            return Response(serializer.data, status=201)
+
+        except GastoOperacion.DoesNotExist:
+            return Response({"error": "GastoOperacion no encontrado"}, status=400)
+        except Usuario.DoesNotExist:
+            return Response({"error": "Usuario no encontrado"}, status=400)
+        except Exception as e:
+            return Response({"error": str(e)}, status=400)
 
     def update(self, request, *args, **kwargs):
-        id_gasto = request.data.get("id_gasto_operacion")
-        descripcion = request.data.get("descripcion")
-        nuevo_precio = request.data.get("precio_unitario")
+        try:
+            instance = self.get_object()
+            data = request.data.copy()
 
-        if id_gasto:
-            try:
-                gasto = GastoOperacion.objects.get(id=id_gasto)
-            except GastoOperacion.DoesNotExist:
-                return Response({"error": "GastoOperacion no encontrado"}, status=400)
-            request.data["id_gasto_operacion"] = gasto.id
-        response = super().update(request, *args, **kwargs)
-        if descripcion and nuevo_precio is not None:
-            Materiales.objects.filter(descripcion=descripcion).update(
-                precio_unitario=nuevo_precio,
-                total=models.F("cantidad") * nuevo_precio
-            )
-        return response
+            if "id_gasto_operacion" in data:
+                gasto_operacion = GastoOperacion.objects.get(id=data["id_gasto_operacion"])
+                instance.id_gasto_operacion = gasto_operacion
+
+            if "descripcion" in data:
+                instance.descripcion = data["descripcion"]
+
+            if "unidad" in data:
+                instance.unidad = data["unidad"]
+
+            if "cantidad" in data:
+                instance.cantidad = data["cantidad"]
+
+            if "precio_unitario" in data:
+                instance.precio_unitario = data["precio_unitario"]
+
+            if "total" in data:
+                instance.total = data["total"]
+
+            if "modificado_por" in data:
+                usuario = Usuario.objects.get(id=data["modificado_por"])
+                instance.modificado_por = usuario
+
+            instance.save()
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data)
+
+        except GastoOperacion.DoesNotExist:
+            return Response({"error": "GastoOperacion no encontrado"}, status=400)
+        except Usuario.DoesNotExist:
+            return Response({"error": "Usuario no encontrado"}, status=400)
+        except Exception as e:
+            return Response({"error": str(e)}, status=400)
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -492,55 +702,82 @@ class EquipoHerramientaViewSet(viewsets.ModelViewSet):
         return queryset
 
 class GastosGeneralesViewSet(viewsets.ModelViewSet):
-    queryset = GastosGeneralesAdministrativos.objects.all()
-    serializer_class = GastosGeneralesAdministrativosSerializer
+    queryset = GastosGenerales.objects.all()
+    serializer_class = GastosGeneralesSerializer
+
     def create(self, request, *args, **kwargs):
         print("Datos recibidos:", request.data)
         data = request.data.copy()
-        id_gasto = data.get("id_gasto_operacion")
-        if id_gasto:
-            try:
-                gasto_operacion = GastoOperacion.objects.get(id=id_gasto)
-                gasto_general = GastosGeneralesAdministrativos.objects.create(
-                    id_gasto_operacion=gasto_operacion,
-                    total=data.get('total', 0)
+
+        try:
+            id_gasto = data.get("id_gasto_operacion")
+            id_usuario = data.get("creado_por")
+
+            if not id_gasto:
+                return Response(
+                    {"error": "id_gasto_operacion es requerido"},
+                    status=status.HTTP_400_BAD_REQUEST
                 )
-                serializer = self.get_serializer(gasto_general)
-                return Response(serializer.data, status=201)
-            except GastoOperacion.DoesNotExist:
-                return Response({"error": "GastoOperacion no encontrado"}, status=400)
-            except Exception as e:
-                return Response({"error": str(e)}, status=400)
-        return Response({"error": "id_gasto_operacion es requerido"}, status=400)
+
+            gasto_operacion = GastoOperacion.objects.get(id=id_gasto)
+            usuario = None
+            if id_usuario:
+                usuario = Usuario.objects.get(id=id_usuario)
+
+            gasto_general = GastosGenerales.objects.create(
+                id_gasto_operacion=gasto_operacion,
+                total=data.get("total", 0),
+                creado_por=usuario
+            )
+
+            serializer = self.get_serializer(gasto_general)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        except GastoOperacion.DoesNotExist:
+            return Response({"error": "GastoOperacion no encontrado"}, status=status.HTTP_400_BAD_REQUEST)
+        except Usuario.DoesNotExist:
+            return Response({"error": "Usuario no encontrado"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     def update(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
             data = request.data.copy()
-            if 'id_gasto_operacion' in data:
+
+            if "id_gasto_operacion" in data:
                 try:
-                    gasto_operacion = GastoOperacion.objects.get(id=data['id_gasto_operacion'])
+                    gasto_operacion = GastoOperacion.objects.get(id=data["id_gasto_operacion"])
                     instance.id_gasto_operacion = gasto_operacion
                 except GastoOperacion.DoesNotExist:
-                    return Response({"error": "GastoOperacion no encontrado"}, status=400)
-            if 'total' in data:
-                instance.total = float(data['total'])
+                    return Response({"error": "GastoOperacion no encontrado"}, status=status.HTTP_400_BAD_REQUEST)
+
+            if "total" in data:
+                instance.total = data["total"]
+
+            # 👇 Aquí ya NO modificamos creado_por
+            if "modificado_por" in data:
+                try:
+                    usuario = Usuario.objects.get(id=data["modificado_por"])
+                    instance.modificado_por = usuario
+                except Usuario.DoesNotExist:
+                    return Response({"error": "Usuario no encontrado"}, status=status.HTTP_400_BAD_REQUEST)
+
             instance.save()
             serializer = self.get_serializer(instance)
             return Response(serializer.data)
-        except GastosGeneralesAdministrativos.DoesNotExist:
-            return Response({"error": "Registro no encontrado"}, status=404)
+
+        except GastosGenerales.DoesNotExist:
+            return Response({"error": "Registro no encontrado"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            return Response({"error": str(e)}, status=400)
-
-
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
     def get_queryset(self):
         queryset = super().get_queryset()
         id_gasto = self.request.query_params.get("id_gasto_operacion")
         if id_gasto:
             queryset = queryset.filter(id_gasto_operacion=id_gasto)
         return queryset
-  
 
 
 
