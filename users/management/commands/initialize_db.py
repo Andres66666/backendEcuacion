@@ -11,22 +11,19 @@ class Command(BaseCommand):
 
         # --- CREAR ROLES ---
         admin_role, _ = Rol.objects.get_or_create(nombre="Administrador", defaults={'estado': True})
-        empleado_role, _ = Rol.objects.get_or_create(nombre="Empleado", defaults={'estado': True})
+        colaborador_role, _ = Rol.objects.get_or_create(nombre="Colaborador", defaults={'estado': True})
+        asistente_role, _ = Rol.objects.get_or_create(nombre="Asistente", defaults={'estado': True})
 
         # --- CREAR PERMISOS ---
         permisos_data = [
-            "GestionDeUsuarios",
-            "GestionDeCatastro",
-            "GestionDeReportes",
-            "ListarRoles",
-            "ListarPermisos",
-            "ListarUsuarios",
-            "ListarUsuarioRol",
-            "ListarRolPermiso",
-            "Operaciones",  # Nuevo permiso
-            "Ecuacion",     # Nuevo permiso
-            "PrecioFactura", # Nuevo permiso
-            "GastosOperaciones" # Nuevo permiso
+            # Gestión de Usuarios
+            "GestionDeUsuarios", "ListarRoles", "ListarPermisos", "ListarUsuarios",
+            "ListarUsuarioRol", "ListarRolPermiso",
+            # Operaciones
+            "Operaciones", "GastosOperaciones",
+            # Reportes
+            "Reportes", "ReporteSQL", "ReporteXSS", "ReporteCSRF",
+            "ReporteDoS", "ReporteKeylogger", "ReporteAuditoria", "ReporteIAGeneral"
         ]
 
         permisos_objetos = {}
@@ -35,66 +32,80 @@ class Command(BaseCommand):
             permisos_objetos[nombre_permiso] = permiso
 
         # --- ASIGNAR PERMISOS A ROLES ---
-        # Todos los permisos al rol Administrador
+        # Administrador → todos los permisos
         for permiso in permisos_objetos.values():
             RolPermiso.objects.get_or_create(rol=admin_role, permiso=permiso)
 
-        # Solo algunos permisos al rol Empleado
-        """ permisos_empleado = ["ListarUsuarios", "ListarPermisos"] """
-        permisos_empleado = [
-            "GestionDeUsuarios",
-            "GestionDeCatastro",
-            "GestionDeReportes",
-            "ListarRoles",
-            "ListarPermisos",
-            "ListarUsuarios",
-            "ListarUsuarioRol",
-            "ListarRolPermiso",
-            "Operaciones",  # Nuevo permiso
-            "Ecuacion",     # Nuevo permiso
-            "PrecioFactura", # Nuevo permiso
-            "GastosOperaciones" # Nuevo permiso
+        # Colaborador → solo acceso a Operaciones
+        permisos_colaborador = ["Operaciones", "GastosOperaciones"]
+        for nombre_permiso in permisos_colaborador:
+            RolPermiso.objects.get_or_create(rol=colaborador_role, permiso=permisos_objetos[nombre_permiso])
+
+        # Asistente → solo acceso a Reportes
+        permisos_asistente = [
+            "Reportes", "ReporteSQL", "ReporteXSS", "ReporteCSRF",
+            "ReporteDoS", "ReporteKeylogger", "ReporteAuditoria", "ReporteIAGeneral"
         ]
-        for nombre_permiso in permisos_empleado:
-            RolPermiso.objects.get_or_create(rol=empleado_role, permiso=permisos_objetos[nombre_permiso])
+        for nombre_permiso in permisos_asistente:
+            RolPermiso.objects.get_or_create(rol=asistente_role, permiso=permisos_objetos[nombre_permiso])
 
-        # --- CREAR USUARIO ADMINISTRADOR ---
-        admin_user, created_admin = Usuario.objects.get_or_create(
-            ci="13247291",
-            defaults={
-                'nombre': "Andres Benito",
-                'apellido': "Yucra",
-                'fecha_nacimiento': date(1998, 11, 6),
-                'telefono': "72937437",
-                'correo': "benitoandrescalle035@gmail.com",
-                'password': make_password("Andres1234*"),
-                'estado': True,
-                'imagen_url': "https://res.cloudinary.com/dlrpns8z7/image/upload/v1743595809/fnsesmm80hgwelhyzaie.jpg"
+        # --- CREAR USUARIOS ---
+        usuarios_data = [
+            {
+                "ci": "13247291",
+                "nombre": "Andres Benito",
+                "apellido": "Yucra",
+                "fecha_nacimiento": date(1998, 11, 6),
+                "telefono": "72937437",
+                "correo": "benitoandrescalle035@gmail.com",
+                "password": "Andres1234*",
+                "rol": admin_role,
+                "imagen_url": "https://res.cloudinary.com/dlrpns8z7/image/upload/v1743595809/fnsesmm80hgwelhyzaie.jpg"
+            },
+            {
+                "ci": "87654321",
+                "nombre": "Juan Carlos",
+                "apellido": "Pérez",
+                "fecha_nacimiento": date(1990, 5, 15),
+                "telefono": "78945612",
+                "correo": "juanperez@example.com",
+                "password": "Colaborador123*",
+                "rol": colaborador_role,
+                "imagen_url": "https://res.cloudinary.com/dlrpns8z7/image/upload/v1743595809/sample-image.jpg"
+            },
+            {
+                "ci": "87654322",
+                "nombre": "Luis",
+                "apellido": "Ramirez",
+                "fecha_nacimiento": date(1995, 7, 10),
+                "telefono": "70123456",
+                "correo": "luis.ramirez@example.com",
+                "password": "Asistente123*",
+                "rol": asistente_role,
+                "imagen_url": "https://res.cloudinary.com/dlrpns8z7/image/upload/v1743595809/sample-image.jpg"
             }
-        )
-        UsuarioRol.objects.get_or_create(usuario=admin_user, rol=admin_role)
-        if created_admin:
-            self.stdout.write(f"✅ Usuario administrador creado: {admin_user}")
+        ]
 
-        # --- CREAR USUARIO EMPLEADO ---
-        empleado_user, created_empleado = Usuario.objects.get_or_create(
-            ci="87654321",
-            defaults={
-                'nombre': "Juan Carlos",
-                'apellido': "Pérez",
-                'fecha_nacimiento': date(1990, 5, 15),
-                'telefono': "78945612",
-                'correo': "juanperez@example.com",
-                'password': make_password("Empleado123*"),
-                'estado': True,
-                'imagen_url': "https://res.cloudinary.com/dlrpns8z7/image/upload/v1743595809/sample-image.jpg"
-            }
-        )
-        UsuarioRol.objects.get_or_create(usuario=empleado_user, rol=empleado_role)
-        if created_empleado:
-            self.stdout.write(f"✅ Usuario empleado creado: {empleado_user}")
+        for u in usuarios_data:
+            user, created = Usuario.objects.get_or_create(
+                ci=u["ci"],
+                defaults={
+                    'nombre': u["nombre"],
+                    'apellido': u["apellido"],
+                    'fecha_nacimiento': u["fecha_nacimiento"],
+                    'telefono': u["telefono"],
+                    'correo': u["correo"],
+                    'password': make_password(u["password"]),
+                    'estado': True,
+                    'imagen_url': u["imagen_url"]
+                }
+            )
+            UsuarioRol.objects.get_or_create(usuario=user, rol=u["rol"])
+            if created:
+                self.stdout.write(f"✅ Usuario creado: {user} con rol {u['rol'].nombre}")
 
-        self.stdout.write(self.style.SUCCESS("🎉 ¡Base de datos RBAC inicializada exitosamente!"))
+        self.stdout.write(self.style.SUCCESS("🎉 ¡Base de datos RBAC inicializada exitosamente con roles, permisos y usuarios!"))
+
 
         # --- INSTRUCCIONES ---
         # Ejecutar en terminal:

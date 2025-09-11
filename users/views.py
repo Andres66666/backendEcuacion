@@ -1,3 +1,6 @@
+
+from django.utils import timezone
+
 import cloudinary
 from django.shortcuts import render
 from .models import EquipoHerramienta, GastoOperacion, GastosGenerales, Proyecto, ManoDeObra, Materiales, Permiso, Rol, RolPermiso, Usuario, UsuarioRol
@@ -16,18 +19,21 @@ from decimal import Decimal, ROUND_HALF_UP
 from rest_framework.decorators import action
 
 from decimal import Decimal, InvalidOperation
+from datetime import timedelta
+from django.utils.timezone import now
+from django.contrib.auth.hashers import make_password, check_password
 
 
 # =====================================================
 # === =============  seccion 1   === ==================
 # =====================================================
+
 class LoginView(APIView):
-    authentication_classes = []  # Eliminamos la autenticación para esta vista
-    permission_classes = []      # Sin permisos especiales
+    authentication_classes = []
+    permission_classes = []
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
-
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -41,23 +47,94 @@ class LoginView(APIView):
             ).get(correo=correo)
 
             if not usuario.estado:
-                return Response({
-                    'error': 'No puedes iniciar sesión. Comuníquese con el administrador. Gracias.'
-                }, status=status.HTTP_403_FORBIDDEN)
+                return Response({'error': 'Usuario desactivado.'}, status=status.HTTP_403_FORBIDDEN)
+
+            if usuario.intentos_fallidos >= 3:
+                if usuario.ultimo_intento and now() - usuario.ultimo_intento < timedelta(minutes=10):
+                    return Response({'error': 'Demasiados intentos fallidos. Intente nuevamente en 10 minutos.'},
+                                    status=status.HTTP_403_FORBIDDEN)
 
             if not check_password(password, usuario.password):
-                return Response({'error': 'Credenciales incorrectas'}, status=status.HTTP_400_BAD_REQUEST)
+                usuario.intentos_fallidos += 1
+                usuario.ultimo_intento = now()
+
+                # Mensajes según intento
+                if usuario.intentos_fallidos == 1:
+                    mensaje_error = "Credenciales incorrectas. Intento 1 de 3."
+                elif usuario.intentos_fallidos == 2:
+                    mensaje_error = "Credenciales incorrectas. Intento 2 de 3. Contactece con el administrador si olvidó su contraseña."
+                elif usuario.intentos_fallidos >= 3:
+                    usuario.estado = False  # Inactiva la cuenta
+                    mensaje_error = "Credenciales incorrectas. Intentos superados. Cuenta inhabilitada, comuníquese con el administrador."
+
+                usuario.save()
+                return Response({'error': mensaje_error}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Reset de intentos fallidos
+            usuario.intentos_fallidos = 0
+            usuario.logins_exitosos += 1
+            usuario.ultimo_intento = now()
+            usuario.save()
+
+            roles = [ur.rol.nombre for ur in usuario.usuariorol_set.all()]
+            permisos = []
+            for ur in usuario.usuariorol_set.all():
+                permisos += [rp.permiso.nombre for rp in ur.rol.rolpermiso_set.all()]
+
+            if not roles or not permisos:
+                return Response({'error': 'El usuario no tiene roles ni permisos asignados.'},
+                                status=status.HTTP_403_FORBIDDEN)
 
             refresh = RefreshToken.for_user(usuario)
             access_token = str(refresh.access_token)
 
-            roles = [usuario_rol.rol.nombre for usuario_rol in usuario.usuariorol_set.all()]
-            permisos = []
-            for usuario_rol in usuario.usuariorol_set.all():
-                permisos += [rp.permiso.nombre for rp in usuario_rol.rol.rolpermiso_set.all()]
+            # ==============================
+            # Mensajes de inicio de sesión
+            # ==============================
+            mensaje_principal = "¡Inicio de sesión exitoso!"
+            mensaje_adicional = ""
 
-            if not roles or not permisos:
-                return Response({'error': 'El usuario no tiene roles ni permisos asignados.'}, status=status.HTTP_403_FORBIDDEN)
+            if "Administrador" not in roles:
+                # Solo si NO es admin aplican estas reglas
+                if not usuario.fecha_cambio_password:  # nunca cambió contraseña
+                    if usuario.logins_exitosos == 1:
+                        mensaje_adicional = "Cambie su contraseña, este es su primer inicio de sesión."
+                    elif usuario.logins_exitosos == 2:
+                        mensaje_adicional = "Debe cambiar su contraseña obligatoriamente, este es su segundo inicio de sesión."
+                    elif usuario.logins_exitosos >= 3:
+                        usuario.estado = False
+                        usuario.save()
+                        return Response({'error': 'Cuenta bloqueada por no cambiar contraseña.'},
+                                        status=status.HTTP_403_FORBIDDEN)
+                    
+            # ==============================
+            # Control de caducidad de contraseña ..
+            # ==============================
+            mensaje_adicional = ""
+            if usuario.fecha_cambio_password: 
+                dias_transcurridos = (now().date() - usuario.fecha_cambio_password.date()).days
+
+                if dias_transcurridos >= 90:
+                    usuario.estado = False
+                    usuario.save()
+                    return Response({'error': 'Su contraseña ha caducado y su cuenta fue desactivada por incumplimiento de normas.'},
+                                    status=status.HTTP_403_FORBIDDEN)
+                elif dias_transcurridos == 89:
+                    mensaje_adicional = "Debe cambiar su contraseña de forma obligatoria. Día 89."
+                elif dias_transcurridos == 88:
+                    mensaje_adicional = "Advertencia: su contraseña caducará pronto. Día 88."
+            else:
+                # Si nunca cambió contraseña, se empieza a contar desde la fecha de creación
+                dias_transcurridos = (now().date() - usuario.fecha_creacion.date()).days
+                if dias_transcurridos >= 90:
+                    usuario.estado = False
+                    usuario.save()
+                    return Response({'error': 'Su contraseña ha caducado y su cuenta fue desactivada por incumplimiento de normas.'},
+                                    status=status.HTTP_403_FORBIDDEN)
+                elif dias_transcurridos == 89:
+                    mensaje_adicional = "Debe cambiar su contraseña de forma obligatoria. Día 89."
+                elif dias_transcurridos == 88:
+                    mensaje_adicional = "Advertencia: su contraseña caducará pronto. Día 88."
 
             return Response({
                 'access_token': access_token,
@@ -66,97 +143,152 @@ class LoginView(APIView):
                 'nombre_usuario': usuario.nombre,
                 'apellido': usuario.apellido,
                 'imagen_url': usuario.imagen_url,
-                'usuario_id': usuario.id
+                'usuario_id': usuario.id,
+                'mensaje': mensaje_principal,
+                'mensaje_adicional': mensaje_adicional,
+                'dias_transcurridos': dias_transcurridos
             }, status=status.HTTP_200_OK)
 
         except Usuario.DoesNotExist:
             return Response({'error': 'Usuario no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
 
 class RolViewSet(viewsets.ModelViewSet):
     queryset = Rol.objects.all()
     serializer_class = RolSerializer
 
     def create(self, request, *args, **kwargs):
+        nombre = request.data.get("nombre", "").strip()
+
+        # Validar duplicado
+        if Rol.objects.filter(nombre__iexact=nombre).exists():
+            return Response(
+                {"error": f"El rol '{nombre}' ya existe."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         return super().create(request, *args, **kwargs)
-    
+
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
+        nombre = request.data.get("nombre", "").strip()
+
+        # Verificar que no exista otro rol con el mismo nombre
+        if Rol.objects.filter(nombre__iexact=nombre).exclude(id=instance.id).exists():
+            return Response(
+                {"error": f"Ya existe otro rol con el nombre '{nombre}'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         serializer = self.get_serializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(serializer.data)
+        return Response(
+            {"mensaje": f"Rol '{nombre}' actualizado correctamente."},
+            status=status.HTTP_200_OK,
+        )
     
+
 class PermisoViewSet(viewsets.ModelViewSet):
     queryset = Permiso.objects.all()
     serializer_class = PermisoSerializer
 
     def create(self, request, *args, **kwargs):
+        nombre = request.data.get("nombre", "").strip()
+
+        # Validar duplicado
+        if Permiso.objects.filter(nombre__iexact=nombre).exists():
+            return Response(
+                {"error": f"El permiso '{nombre}' ya existe."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         return super().create(request, *args, **kwargs)
-    
+
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
+        nombre = request.data.get("nombre", "").strip()
+
+        # Validar duplicado en otro registro
+        if Permiso.objects.filter(nombre__iexact=nombre).exclude(id=instance.id).exists():
+            return Response(
+                {"error": f"Ya existe otro permiso con el nombre '{nombre}'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         serializer = self.get_serializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(serializer.data)
+        return Response(
+            {"mensaje": f"Permiso '{nombre}' actualizado correctamente."},
+            status=status.HTTP_200_OK,
+        )
+
 
 class UsuarioViewSet(viewsets.ModelViewSet):
-        queryset = Usuario.objects.all()
-        serializer_class = UsuarioSerializer
+    queryset = Usuario.objects.all()
+    serializer_class = UsuarioSerializer
 
-        def create(self, request, *args, **kwargs):
-            data = request.data.copy()
+    def create(self, request, *args, **kwargs):
+        data = request.data.copy()
 
-            # Subir imagen si existe
-            if 'imagen_url' in request.FILES:
-                try:
-                    uploaded_image = cloudinary.uploader.upload(request.FILES['imagen_url'])
-                    data['imagen_url'] = uploaded_image.get('url')
-                except Exception as e:
-                    return Response({'error': f'Error al subir imagen: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+        # Subir imagen si existe
+        if 'imagen_url' in request.FILES:
+            try:
+                uploaded_image = cloudinary.uploader.upload(request.FILES['imagen_url'])
+                data['imagen_url'] = uploaded_image.get('url')
+            except Exception as e:
+                return Response({'error': f'Error al subir imagen: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Crear usuario
-            serializer = self.get_serializer(data=data)
-            serializer.is_valid(raise_exception=True)
-            usuario = serializer.save()
+        # Crear usuario
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        usuario = serializer.save()
 
-            # 👉 Asignar rol automáticamente si viene en el request
-            rol_id = request.data.get('rol')
-            if rol_id:
-                UsuarioRol.objects.create(usuario=usuario, rol_id=rol_id)
+        # Asignar rol si viene en el request
+        rol_id = request.data.get('rol')
+        if rol_id:
+            UsuarioRol.objects.create(usuario=usuario, rol_id=rol_id)
 
-            return Response(serializer.data, status=status.HTTP_201_CREATED)    
-           
-        def update(self, request, *args, **kwargs):
-            instance = self.get_object()
-            data = request.data.copy()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-            print("Archivos recibidos:", request.FILES)
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        data = request.data.copy()
 
-            # Subir nueva imagen si se incluye
-            if 'imagen_url' in request.FILES:
-                try:
-                    uploaded_image = cloudinary.uploader.upload(request.FILES['imagen_url'])
-                    data['imagen_url'] = uploaded_image.get('url')
-                except Exception as e:
-                    print("Error al subir imagen:", e)
-                    return Response({'error': 'Error al subir imagen a Cloudinary'}, status=status.HTTP_400_BAD_REQUEST)
-            else:
-                # Si no se sube una nueva imagen, mantener la actual
-                data['imagen_url'] = instance.imagen_url
+        print("Archivos recibidos:", request.FILES)
 
-            # Eliminar el archivo si quedó por accidente
-            if 'imagen_url' in request.FILES:
-                del request._files['imagen_url']
+        # Subir nueva imagen si se incluye
+        if 'imagen_url' in request.FILES:
+            try:
+                uploaded_image = cloudinary.uploader.upload(request.FILES['imagen_url'])
+                data['imagen_url'] = uploaded_image.get('url')
+            except Exception as e:
+                print("Error al subir imagen:", e)
+                return Response({'error': 'Error al subir imagen a Cloudinary'}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            # Mantener imagen actual si no se sube nueva
+            data['imagen_url'] = instance.imagen_url
 
-            serializer = self.get_serializer(instance, data=data, partial=True)
+        # ⚡ Detectar cambio de contraseña
+        nueva_password = data.get('password')
+        if nueva_password and not check_password(nueva_password, instance.password):
+            # Solo si es distinta de la actual
+            data['password'] = make_password(nueva_password)
+            data['fecha_cambio_password'] = timezone.now()
+            
+        # Eliminar archivo accidental
+        if 'imagen_url' in request.FILES:
+            del request._files['imagen_url']
 
-            if not serializer.is_valid():
-                print("Errores del serializer:", serializer.errors)
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.get_serializer(instance, data=data, partial=True)
 
-            serializer.save()
-            return Response(serializer.data)
+        if not serializer.is_valid():
+            print("Errores del serializer:", serializer.errors)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer.save()
+        return Response(serializer.data)
         
 class UsuarioRolViewSet(viewsets.ModelViewSet):
     queryset = UsuarioRol.objects.all()
@@ -301,7 +433,8 @@ class ProyectoViewSet(viewsets.ModelViewSet):
                 "b_margen_utilidad", "porcentaje_global_100"
             ]:
                 if field in data:
-                    setattr(instance, field, data[field])
+                    setattr(instance, field, data[field] if field != "NombreProyecto" else data[field].strip())
+
 
             if "modificado_por" in data:
                 usuario = Usuario.objects.get(id=data["modificado_por"])
@@ -330,7 +463,7 @@ class ProyectoViewSet(viewsets.ModelViewSet):
             Materiales,
             ManoDeObra,
             EquipoHerramienta,
-            GastosGeneralesAdministrativos,
+            GastosGenerales,
         )
         # Buscar todos los gastos asociados al proyecto
         gastos = GastoOperacion.objects.filter(identificador=instance)
@@ -340,7 +473,7 @@ class ProyectoViewSet(viewsets.ModelViewSet):
             Materiales.objects.filter(id_gasto_operacion=gasto).delete()
             ManoDeObra.objects.filter(id_gasto_operacion=gasto).delete()
             EquipoHerramienta.objects.filter(id_gasto_operacion=gasto).delete()
-            GastosGeneralesAdministrativos.objects.filter(id_gasto_operacion=gasto).delete()
+            GastosGenerales.objects.filter(id_gasto_operacion=gasto).delete()
             # Luego borrar el gasto
             gasto.delete()
 

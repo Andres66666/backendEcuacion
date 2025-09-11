@@ -1,4 +1,6 @@
 # Create your models here.
+from django.utils import timezone
+
 from decimal import Decimal
 import uuid
 from django.db import models
@@ -19,6 +21,7 @@ class Permiso(models.Model):
 
     def __str__(self):
         return self.nombre
+    
 class Usuario(models.Model):
     nombre = models.CharField(max_length=100)
     apellido = models.CharField(max_length=100)
@@ -32,6 +35,11 @@ class Usuario(models.Model):
     imagen_url = models.URLField(max_length=500, null=True, blank=True)
     estado = models.BooleanField(default=True)
 
+    intentos_fallidos = models.IntegerField(default=0)
+    ultimo_intento = models.DateTimeField(null=True, blank=True)
+    fecha_cambio_password = models.DateTimeField(null=True, blank=True)
+    logins_exitosos = models.IntegerField(default=0)
+
     def save(self, *args, **kwargs):
         # Solo volver a encriptar si la contraseña ha cambiado
         if 'pbkdf2' not in self.password:
@@ -40,6 +48,7 @@ class Usuario(models.Model):
 
     def __str__(self):
         return f"{self.nombre} {self.apellido}"
+
 
 class UsuarioRol(models.Model):
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
