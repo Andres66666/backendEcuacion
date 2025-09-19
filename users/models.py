@@ -6,6 +6,7 @@ import uuid
 from django.db import models
 from django.contrib.auth.hashers import make_password
 
+
 # =====================================================
 # === =============  seccion 1   === ==================
 # =====================================================
@@ -15,13 +16,16 @@ class Rol(models.Model):
 
     def __str__(self):
         return self.nombre
+
+
 class Permiso(models.Model):
     nombre = models.CharField(max_length=100)
     estado = models.BooleanField(default=True)
 
     def __str__(self):
         return self.nombre
-    
+
+
 class Usuario(models.Model):
     nombre = models.CharField(max_length=100)
     apellido = models.CharField(max_length=100)
@@ -42,7 +46,7 @@ class Usuario(models.Model):
 
     def save(self, *args, **kwargs):
         # Solo volver a encriptar si la contraseña ha cambiado
-        if 'pbkdf2' not in self.password:
+        if "pbkdf2" not in self.password:
             self.password = make_password(self.password)
         super().save(*args, **kwargs)
 
@@ -55,7 +59,7 @@ class UsuarioRol(models.Model):
     rol = models.ForeignKey(Rol, on_delete=models.CASCADE)
 
     class Meta:
-        unique_together = ('usuario', 'rol')
+        unique_together = ("usuario", "rol")
 
 
 class RolPermiso(models.Model):
@@ -63,11 +67,13 @@ class RolPermiso(models.Model):
     permiso = models.ForeignKey(Permiso, on_delete=models.CASCADE)
 
     class Meta:
-        unique_together = ('rol', 'permiso')
+        unique_together = ("rol", "permiso")
+
 
 # =====================================================
 # === =============  seccion 2   === ==================
 # =====================================================
+
 
 class Proyecto(models.Model):
     id_general = models.AutoField(primary_key=True)
@@ -84,16 +90,23 @@ class Proyecto(models.Model):
     b_margen_utilidad = models.DecimalField(max_digits=5, decimal_places=2)
     porcentaje_global_100 = models.DecimalField(max_digits=5, decimal_places=2)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
-    fecha_actualizacion = models.DateTimeField(auto_now=True) 
-    creado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, related_name="Proyecto_creado")
-    modificado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True,  related_name="Proyecto_modificado")
-
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+    creado_por = models.ForeignKey(
+        Usuario, on_delete=models.SET_NULL, null=True, related_name="Proyecto_creado"
+    )
+    modificado_por = models.ForeignKey(
+        Usuario,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="Proyecto_modificado",
+    )
 
     def __str__(self):
         return f"Registro #{self.id_general}"
 
+
 class GastoOperacion(models.Model):
-    identificador = models.ForeignKey(Proyecto,on_delete=models.CASCADE, null=False)
+    identificador = models.ForeignKey(Proyecto, on_delete=models.CASCADE, null=False)
     descripcion = models.CharField(max_length=255)
     unidad = models.CharField(max_length=50)
     cantidad = models.DecimalField(max_digits=10, decimal_places=2)
@@ -102,22 +115,28 @@ class GastoOperacion(models.Model):
     costo_parcial = models.DecimalField(max_digits=12, decimal_places=2, editable=False)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
-    creado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, related_name="Gastos_creados")
-    modificado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True,  related_name="Gastos_modificados")
-    
+    creado_por = models.ForeignKey(
+        Usuario, on_delete=models.SET_NULL, null=True, related_name="Gastos_creados"
+    )
+    modificado_por = models.ForeignKey(
+        Usuario, on_delete=models.SET_NULL, null=True, related_name="Gastos_modificados"
+    )
 
     def save(self, *args, **kwargs):
-        self.costo_parcial = (self.cantidad or Decimal("0")) * (self.precio_unitario or Decimal("0"))
+        self.costo_parcial = (self.cantidad or Decimal("0")) * (
+            self.precio_unitario or Decimal("0")
+        )
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.descripcion} ({self.cantidad} {self.unidad} @ {self.precio_unitario})"
 
+
 # =====================================================
 # === =============  seccion 3   === ==================
 # =====================================================
 class Materiales(models.Model):
-    id_gasto_operacion  = models.ForeignKey(GastoOperacion, on_delete=models.CASCADE)
+    id_gasto_operacion = models.ForeignKey(GastoOperacion, on_delete=models.CASCADE)
     descripcion = models.CharField(max_length=255)
     unidad = models.CharField(max_length=50)
     cantidad = models.DecimalField(max_digits=10, decimal_places=2)
@@ -125,14 +144,22 @@ class Materiales(models.Model):
     total = models.DecimalField(max_digits=12, decimal_places=2)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
-    creado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, related_name="materiales_creados")
-    modificado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True,  related_name="materiales_modificados")
+    creado_por = models.ForeignKey(
+        Usuario, on_delete=models.SET_NULL, null=True, related_name="materiales_creados"
+    )
+    modificado_por = models.ForeignKey(
+        Usuario,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="materiales_modificados",
+    )
 
     def __str__(self):
         return f"{self.unidad} - {self.total}"
-    
+
+
 class ManoDeObra(models.Model):
-    id_gasto_operacion  = models.ForeignKey(GastoOperacion, on_delete=models.CASCADE)
+    id_gasto_operacion = models.ForeignKey(GastoOperacion, on_delete=models.CASCADE)
     descripcion = models.CharField(max_length=255)
     unidad = models.CharField(max_length=50)
     cantidad = models.DecimalField(max_digits=10, decimal_places=2)
@@ -140,14 +167,19 @@ class ManoDeObra(models.Model):
     total = models.DecimalField(max_digits=12, decimal_places=2)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
-    creado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, related_name="manos_creadas")
-    modificado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True,  related_name="manos_modificadas")
+    creado_por = models.ForeignKey(
+        Usuario, on_delete=models.SET_NULL, null=True, related_name="manos_creadas"
+    )
+    modificado_por = models.ForeignKey(
+        Usuario, on_delete=models.SET_NULL, null=True, related_name="manos_modificadas"
+    )
 
     def __str__(self):
         return f"{self.unidad} - {self.total}"
+
 
 class EquipoHerramienta(models.Model):
-    id_gasto_operacion  = models.ForeignKey(GastoOperacion, on_delete=models.CASCADE)
+    id_gasto_operacion = models.ForeignKey(GastoOperacion, on_delete=models.CASCADE)
     descripcion = models.CharField(max_length=255)
     unidad = models.CharField(max_length=50)
     cantidad = models.DecimalField(max_digits=10, decimal_places=2)
@@ -155,20 +187,46 @@ class EquipoHerramienta(models.Model):
     total = models.DecimalField(max_digits=12, decimal_places=2)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
-    creado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, related_name="equipos_creados")
-    modificado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True,  related_name="equipos_modificados")
+    creado_por = models.ForeignKey(
+        Usuario, on_delete=models.SET_NULL, null=True, related_name="equipos_creados"
+    )
+    modificado_por = models.ForeignKey(
+        Usuario,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="equipos_modificados",
+    )
 
     def __str__(self):
         return f"{self.unidad} - {self.total}"
+
 
 # === GASTOS GENERALES Y ADMINISTRATIVOS ===
 class GastosGenerales(models.Model):
-    id_gasto_operacion  = models.ForeignKey(GastoOperacion, on_delete=models.CASCADE)
+    id_gasto_operacion = models.ForeignKey(GastoOperacion, on_delete=models.CASCADE)
     total = models.DecimalField(max_digits=12, decimal_places=2)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
-    creado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, related_name="gastos_creados")
-    modificado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True,  related_name="gastos_modificados")
+    creado_por = models.ForeignKey(
+        Usuario, on_delete=models.SET_NULL, null=True, related_name="gastos_creados"
+    )
+    modificado_por = models.ForeignKey(
+        Usuario, on_delete=models.SET_NULL, null=True, related_name="gastos_modificados"
+    )
 
     def __str__(self):
-         return f"{self.total}"
+        return f"{self.total}"
+
+
+# === AUDITORIA ATACNATES ===
+class Atacante(models.Model):
+    ip = models.GenericIPAddressField()
+    user_agent = models.TextField(blank=True, null=True)
+    payload = models.TextField(blank=True, null=True)
+    tipos = models.TextField()  # Lista de ataques detectados
+    descripcion = models.TextField()  #
+    fecha = models.DateTimeField(auto_now_add=True)
+    bloqueado = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.ip} - {self.fecha}"

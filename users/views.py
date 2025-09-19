@@ -1,16 +1,42 @@
-
 from django.utils import timezone
 
 import cloudinary
 from django.shortcuts import render
-from .models import EquipoHerramienta, GastoOperacion, GastosGenerales, Proyecto, ManoDeObra, Materiales, Permiso, Rol, RolPermiso, Usuario, UsuarioRol
-from .serializers import   EquipoHerramientaSerializer, GastoOperacionSerializer, GastosGeneralesSerializer, ProyectoSerializer, LoginSerializer, ManoDeObraSerializer, MaterialesSerializer, PermisoSerializer, RolPermisoSerializer, RolSerializer, UsuarioRolSerializer, UsuarioSerializer
+from .models import (
+    Atacante,
+    EquipoHerramienta,
+    GastoOperacion,
+    GastosGenerales,
+    Proyecto,
+    ManoDeObra,
+    Materiales,
+    Permiso,
+    Rol,
+    RolPermiso,
+    Usuario,
+    UsuarioRol,
+)
+from .serializers import (
+    AtacanteSerializer,
+    EquipoHerramientaSerializer,
+    GastoOperacionSerializer,
+    GastosGeneralesSerializer,
+    ProyectoSerializer,
+    LoginSerializer,
+    ManoDeObraSerializer,
+    MaterialesSerializer,
+    PermisoSerializer,
+    RolPermisoSerializer,
+    RolSerializer,
+    UsuarioRolSerializer,
+    UsuarioSerializer,
+)
 from rest_framework import viewsets
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.db.models import Prefetch
-from django.contrib.auth.hashers import  check_password
+from django.contrib.auth.hashers import check_password
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import status
 from cloudinary import uploader
@@ -23,10 +49,21 @@ from datetime import timedelta
 from django.utils.timezone import now
 from django.contrib.auth.hashers import make_password, check_password
 
+from rest_framework.permissions import IsAdminUser
+from rest_framework.permissions import AllowAny
+
+import json
+
 
 # =====================================================
 # === =============  seccion 1   === ==================
 # =====================================================
+
+
+class AtacanteViewSet(viewsets.ModelViewSet):
+    queryset = Atacante.objects.all().order_by("-fecha")
+    serializer_class = AtacanteSerializer
+
 
 class LoginView(APIView):
     authentication_classes = []
@@ -37,22 +74,36 @@ class LoginView(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        correo = serializer.validated_data.get('correo')
-        password = serializer.validated_data.get('password')
+        correo = serializer.validated_data.get("correo")
+        password = serializer.validated_data.get("password")
 
         try:
             usuario = Usuario.objects.prefetch_related(
-                Prefetch('usuariorol_set', queryset=UsuarioRol.objects.select_related('rol')),
-                Prefetch('usuariorol_set__rol__rolpermiso_set', queryset=RolPermiso.objects.select_related('permiso'))
+                Prefetch(
+                    "usuariorol_set", queryset=UsuarioRol.objects.select_related("rol")
+                ),
+                Prefetch(
+                    "usuariorol_set__rol__rolpermiso_set",
+                    queryset=RolPermiso.objects.select_related("permiso"),
+                ),
             ).get(correo=correo)
 
             if not usuario.estado:
-                return Response({'error': 'Usuario desactivado.'}, status=status.HTTP_403_FORBIDDEN)
+                return Response(
+                    {"error": "Usuario desactivado."}, status=status.HTTP_403_FORBIDDEN
+                )
 
             if usuario.intentos_fallidos >= 3:
-                if usuario.ultimo_intento and now() - usuario.ultimo_intento < timedelta(minutes=10):
-                    return Response({'error': 'Demasiados intentos fallidos. Intente nuevamente en 10 minutos.'},
-                                    status=status.HTTP_403_FORBIDDEN)
+                if (
+                    usuario.ultimo_intento
+                    and now() - usuario.ultimo_intento < timedelta(minutes=10)
+                ):
+                    return Response(
+                        {
+                            "error": "Demasiados intentos fallidos. Intente nuevamente en 10 minutos."
+                        },
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
 
             if not check_password(password, usuario.password):
                 usuario.intentos_fallidos += 1
@@ -68,7 +119,9 @@ class LoginView(APIView):
                     mensaje_error = "Credenciales incorrectas. Intentos superados. Cuenta inhabilitada, comuníquese con el administrador."
 
                 usuario.save()
-                return Response({'error': mensaje_error}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"error": mensaje_error}, status=status.HTTP_400_BAD_REQUEST
+                )
 
             # Reset de intentos fallidos
             usuario.intentos_fallidos = 0
@@ -82,8 +135,10 @@ class LoginView(APIView):
                 permisos += [rp.permiso.nombre for rp in ur.rol.rolpermiso_set.all()]
 
             if not roles or not permisos:
-                return Response({'error': 'El usuario no tiene roles ni permisos asignados.'},
-                                status=status.HTTP_403_FORBIDDEN)
+                return Response(
+                    {"error": "El usuario no tiene roles ni permisos asignados."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
 
             refresh = RefreshToken.for_user(usuario)
             access_token = str(refresh.access_token)
@@ -98,59 +153,100 @@ class LoginView(APIView):
                 # Solo si NO es admin aplican estas reglas
                 if not usuario.fecha_cambio_password:  # nunca cambió contraseña
                     if usuario.logins_exitosos == 1:
-                        mensaje_adicional = "Cambie su contraseña, este es su primer inicio de sesión."
+                        mensaje_adicional = (
+                            "Cambie su contraseña, este es su primer inicio de sesión."
+                        )
                     elif usuario.logins_exitosos == 2:
                         mensaje_adicional = "Debe cambiar su contraseña obligatoriamente, este es su segundo inicio de sesión."
                     elif usuario.logins_exitosos >= 3:
                         usuario.estado = False
                         usuario.save()
-                        return Response({'error': 'Cuenta bloqueada por no cambiar contraseña.'},
-                                        status=status.HTTP_403_FORBIDDEN)
-                    
+                        return Response(
+                            {"error": "Cuenta bloqueada por no cambiar contraseña."},
+                            status=status.HTTP_403_FORBIDDEN,
+                        )
+
             # ==============================
             # Control de caducidad de contraseña ..
             # ==============================
             mensaje_adicional = ""
-            if usuario.fecha_cambio_password: 
-                dias_transcurridos = (now().date() - usuario.fecha_cambio_password.date()).days
+            if usuario.fecha_cambio_password:
+                dias_transcurridos = (
+                    now().date() - usuario.fecha_cambio_password.date()
+                ).days
 
                 if dias_transcurridos >= 90:
                     usuario.estado = False
                     usuario.save()
-                    return Response({'error': 'Su contraseña ha caducado y su cuenta fue desactivada por incumplimiento de normas.'},
-                                    status=status.HTTP_403_FORBIDDEN)
+                    return Response(
+                        {
+                            "error": "Su contraseña ha caducado y su cuenta fue desactivada por incumplimiento de normas."
+                        },
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
                 elif dias_transcurridos == 89:
-                    mensaje_adicional = "Debe cambiar su contraseña de forma obligatoria. Día 89."
+                    mensaje_adicional = (
+                        "Debe cambiar su contraseña de forma obligatoria. Día 89."
+                    )
                 elif dias_transcurridos == 88:
-                    mensaje_adicional = "Advertencia: su contraseña caducará pronto. Día 88."
+                    mensaje_adicional = (
+                        "Advertencia: su contraseña caducará pronto. Día 88."
+                    )
             else:
                 # Si nunca cambió contraseña, se empieza a contar desde la fecha de creación
                 dias_transcurridos = (now().date() - usuario.fecha_creacion.date()).days
                 if dias_transcurridos >= 90:
                     usuario.estado = False
                     usuario.save()
-                    return Response({'error': 'Su contraseña ha caducado y su cuenta fue desactivada por incumplimiento de normas.'},
-                                    status=status.HTTP_403_FORBIDDEN)
+                    return Response(
+                        {
+                            "error": "Su contraseña ha caducado y su cuenta fue desactivada por incumplimiento de normas."
+                        },
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
                 elif dias_transcurridos == 89:
-                    mensaje_adicional = "Debe cambiar su contraseña de forma obligatoria. Día 89."
+                    mensaje_adicional = (
+                        "Debe cambiar su contraseña de forma obligatoria. Día 89."
+                    )
                 elif dias_transcurridos == 88:
-                    mensaje_adicional = "Advertencia: su contraseña caducará pronto. Día 88."
+                    mensaje_adicional = (
+                        "Advertencia: su contraseña caducará pronto. Día 88."
+                    )
 
-            return Response({
-                'access_token': access_token,
-                'roles': roles,
-                'permisos': permisos,
-                'nombre_usuario': usuario.nombre,
-                'apellido': usuario.apellido,
-                'imagen_url': usuario.imagen_url,
-                'usuario_id': usuario.id,
-                'mensaje': mensaje_principal,
-                'mensaje_adicional': mensaje_adicional,
-                'dias_transcurridos': dias_transcurridos
-            }, status=status.HTTP_200_OK)
+            return Response(
+                {
+                    "access_token": access_token,
+                    "roles": roles,
+                    "permisos": permisos,
+                    "nombre_usuario": usuario.nombre,
+                    "apellido": usuario.apellido,
+                    "imagen_url": usuario.imagen_url,
+                    "usuario_id": usuario.id,
+                    "mensaje": mensaje_principal,
+                    "mensaje_adicional": mensaje_adicional,
+                    "dias_transcurridos": dias_transcurridos,
+                },
+                status=status.HTTP_200_OK,
+            )
 
         except Usuario.DoesNotExist:
-            return Response({'error': 'Usuario no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+            # Registrar intento de ataque o usuario no existente
+            try:
+                Atacante.objects.create(
+                    ip=request.META.get("REMOTE_ADDR"),
+                    tipos="Usuario no encontrado",
+                    payload=json.dumps(request.data),
+                    user_agent=request.META.get("HTTP_USER_AGENT", ""),
+                    bloqueado=True,
+                    fecha=now(),
+                )
+                print("[LoginView] Ataque registrado: usuario no encontrado")
+            except Exception as e:
+                print("Error guardando ataque:", e)
+
+            return Response(
+                {"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND
+            )
 
 
 class RolViewSet(viewsets.ModelViewSet):
@@ -187,7 +283,7 @@ class RolViewSet(viewsets.ModelViewSet):
             {"mensaje": f"Rol '{nombre}' actualizado correctamente."},
             status=status.HTTP_200_OK,
         )
-    
+
 
 class PermisoViewSet(viewsets.ModelViewSet):
     queryset = Permiso.objects.all()
@@ -210,7 +306,11 @@ class PermisoViewSet(viewsets.ModelViewSet):
         nombre = request.data.get("nombre", "").strip()
 
         # Validar duplicado en otro registro
-        if Permiso.objects.filter(nombre__iexact=nombre).exclude(id=instance.id).exists():
+        if (
+            Permiso.objects.filter(nombre__iexact=nombre)
+            .exclude(id=instance.id)
+            .exists()
+        ):
             return Response(
                 {"error": f"Ya existe otro permiso con el nombre '{nombre}'."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -233,12 +333,15 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         data = request.data.copy()
 
         # Subir imagen si existe
-        if 'imagen_url' in request.FILES:
+        if "imagen_url" in request.FILES:
             try:
-                uploaded_image = cloudinary.uploader.upload(request.FILES['imagen_url'])
-                data['imagen_url'] = uploaded_image.get('url')
+                uploaded_image = cloudinary.uploader.upload(request.FILES["imagen_url"])
+                data["imagen_url"] = uploaded_image.get("url")
             except Exception as e:
-                return Response({'error': f'Error al subir imagen: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"error": f"Error al subir imagen: {str(e)}"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
         # Crear usuario
         serializer = self.get_serializer(data=data)
@@ -246,7 +349,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         usuario = serializer.save()
 
         # Asignar rol si viene en el request
-        rol_id = request.data.get('rol')
+        rol_id = request.data.get("rol")
         if rol_id:
             UsuarioRol.objects.create(usuario=usuario, rol_id=rol_id)
 
@@ -259,27 +362,30 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         print("Archivos recibidos:", request.FILES)
 
         # Subir nueva imagen si se incluye
-        if 'imagen_url' in request.FILES:
+        if "imagen_url" in request.FILES:
             try:
-                uploaded_image = cloudinary.uploader.upload(request.FILES['imagen_url'])
-                data['imagen_url'] = uploaded_image.get('url')
+                uploaded_image = cloudinary.uploader.upload(request.FILES["imagen_url"])
+                data["imagen_url"] = uploaded_image.get("url")
             except Exception as e:
                 print("Error al subir imagen:", e)
-                return Response({'error': 'Error al subir imagen a Cloudinary'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"error": "Error al subir imagen a Cloudinary"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
         else:
             # Mantener imagen actual si no se sube nueva
-            data['imagen_url'] = instance.imagen_url
+            data["imagen_url"] = instance.imagen_url
 
         # ⚡ Detectar cambio de contraseña
-        nueva_password = data.get('password')
+        nueva_password = data.get("password")
         if nueva_password and not check_password(nueva_password, instance.password):
             # Solo si es distinta de la actual
-            data['password'] = make_password(nueva_password)
-            data['fecha_cambio_password'] = timezone.now()
-            
+            data["password"] = make_password(nueva_password)
+            data["fecha_cambio_password"] = timezone.now()
+
         # Eliminar archivo accidental
-        if 'imagen_url' in request.FILES:
-            del request._files['imagen_url']
+        if "imagen_url" in request.FILES:
+            del request._files["imagen_url"]
 
         serializer = self.get_serializer(instance, data=data, partial=True)
 
@@ -289,35 +395,50 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 
         serializer.save()
         return Response(serializer.data)
-        
+
+
 class UsuarioRolViewSet(viewsets.ModelViewSet):
     queryset = UsuarioRol.objects.all()
     serializer_class = UsuarioRolSerializer
 
     def create(self, request, *args, **kwargs):
-        usuario = request.data.get('usuario')
-        rol = request.data.get('rol')
+        usuario = request.data.get("usuario")
+        rol = request.data.get("rol")
 
-        usuario_id = usuario.get('id') if isinstance(usuario, dict) else usuario
-        rol_id = rol.get('id') if isinstance(rol, dict) else rol
+        usuario_id = usuario.get("id") if isinstance(usuario, dict) else usuario
+        rol_id = rol.get("id") if isinstance(rol, dict) else rol
 
         if UsuarioRol.objects.filter(usuario_id=usuario_id, rol_id=rol_id).exists():
-            return Response({'error': ['El usuario ya tiene este rol asignado']}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": ["El usuario ya tiene este rol asignado"]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         usuario_rol = UsuarioRol.objects.create(usuario_id=usuario_id, rol_id=rol_id)
-        return Response(UsuarioRolSerializer(usuario_rol).data, status=status.HTTP_201_CREATED)
+        return Response(
+            UsuarioRolSerializer(usuario_rol).data, status=status.HTTP_201_CREATED
+        )
 
     def update(self, request, pk=None):
         instance = self.get_object()
 
-        usuario_raw = request.data.get('usuario')
-        rol_raw = request.data.get('rol')
+        usuario_raw = request.data.get("usuario")
+        rol_raw = request.data.get("rol")
 
-        usuario_id = usuario_raw.get('id') if isinstance(usuario_raw, dict) else usuario_raw
-        rol_id = rol_raw.get('id') if isinstance(rol_raw, dict) else rol_raw
+        usuario_id = (
+            usuario_raw.get("id") if isinstance(usuario_raw, dict) else usuario_raw
+        )
+        rol_id = rol_raw.get("id") if isinstance(rol_raw, dict) else rol_raw
 
-        if UsuarioRol.objects.filter(usuario_id=usuario_id, rol_id=rol_id).exclude(pk=instance.pk).exists():
-            return Response({'error': ['El usuario ya tiene este rol asignado']}, status=status.HTTP_400_BAD_REQUEST)
+        if (
+            UsuarioRol.objects.filter(usuario_id=usuario_id, rol_id=rol_id)
+            .exclude(pk=instance.pk)
+            .exists()
+        ):
+            return Response(
+                {"error": ["El usuario ya tiene este rol asignado"]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         instance.usuario_id = usuario_id
         instance.rol_id = rol_id
@@ -326,35 +447,52 @@ class UsuarioRolViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
 
+
 class RolPermisoViewSet(viewsets.ModelViewSet):
     queryset = RolPermiso.objects.all()
     serializer_class = RolPermisoSerializer
 
     def create(self, request, *args, **kwargs):
-        rol_id = request.data.get('rol')
-        permiso_id = request.data.get('permiso')
+        rol_id = request.data.get("rol")
+        permiso_id = request.data.get("permiso")
 
         # Verificar si ya existe la relación entre rol y permiso
         if RolPermiso.objects.filter(rol_id=rol_id, permiso_id=permiso_id).exists():
-            return Response({'error': ['Este rol ya tiene este permiso asignado']}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": ["Este rol ya tiene este permiso asignado"]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Crear la relación
         roles_permisos = RolPermiso.objects.create(rol_id=rol_id, permiso_id=permiso_id)
-        return Response(RolPermisoSerializer(roles_permisos).data, status=status.HTTP_201_CREATED)
+        return Response(
+            RolPermisoSerializer(roles_permisos).data, status=status.HTTP_201_CREATED
+        )
 
     def update(self, request, pk=None):
         instance = self.get_object()
 
-        rol = request.data.get('rol')
-        permiso = request.data.get('permiso')
+        rol = request.data.get("rol")
+        permiso = request.data.get("permiso")
 
         # Si vienen como objetos (dict), extraer el ID; si ya son IDs, usarlos directamente
-        rol_id = rol.get('id') if isinstance(rol, dict) else rol or instance.rol_id
-        permiso_id = permiso.get('id') if isinstance(permiso, dict) else permiso or instance.permiso_id
+        rol_id = rol.get("id") if isinstance(rol, dict) else rol or instance.rol_id
+        permiso_id = (
+            permiso.get("id")
+            if isinstance(permiso, dict)
+            else permiso or instance.permiso_id
+        )
 
         # Verificar duplicidad
-        if RolPermiso.objects.filter(rol_id=rol_id, permiso_id=permiso_id).exclude(pk=instance.pk).exists():
-            return Response({'error': ['Este rol ya tiene este permiso asignado']}, status=status.HTTP_400_BAD_REQUEST)
+        if (
+            RolPermiso.objects.filter(rol_id=rol_id, permiso_id=permiso_id)
+            .exclude(pk=instance.pk)
+            .exists()
+        ):
+            return Response(
+                {"error": ["Este rol ya tiene este permiso asignado"]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Actualizar
         instance.rol_id = rol_id
@@ -364,37 +502,46 @@ class RolPermisoViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
 
+
 # =====================================================
 # === =============  seccion 2   === ==================
 # =====================================================
 class ProyectoViewSet(viewsets.ModelViewSet):
     queryset = Proyecto.objects.all()
     serializer_class = ProyectoSerializer
+
     def create(self, request, *args, **kwargs):
         data = request.data.copy()
         try:
-            nombre_proyecto = data.get('NombreProyecto', '').strip()
+            nombre_proyecto = data.get("NombreProyecto", "").strip()
             if not nombre_proyecto:
-                return Response({'error': 'El campo NombreProyecto es obligatorio.'}, status=400)
+                return Response(
+                    {"error": "El campo NombreProyecto es obligatorio."}, status=400
+                )
 
-            existente = Proyecto.objects.filter(NombreProyecto__iexact=nombre_proyecto).first()
+            existente = Proyecto.objects.filter(
+                NombreProyecto__iexact=nombre_proyecto
+            ).first()
             if existente:
-                return Response({
-                    'mensaje': 'Ya existe un proyecto con este nombre.',
-                    'id_general': existente.id_general,
-                    'NombreProyecto': existente.NombreProyecto,
-                    'carga_social': existente.carga_social,
-                    'iva_efectiva': existente.iva_efectiva,
-                    'herramientas': existente.herramientas,
-                    'gastos_generales': existente.gastos_generales,
-                    'iva_tasa_nominal': existente.iva_tasa_nominal,
-                    'it': existente.it,
-                    'iue': existente.iue,
-                    'ganancia': existente.ganancia,
-                    'a_costo_venta': existente.a_costo_venta,
-                    'b_margen_utilidad': existente.b_margen_utilidad,
-                    'porcentaje_global_100': existente.porcentaje_global_100
-                }, status=200)
+                return Response(
+                    {
+                        "mensaje": "Ya existe un proyecto con este nombre.",
+                        "id_general": existente.id_general,
+                        "NombreProyecto": existente.NombreProyecto,
+                        "carga_social": existente.carga_social,
+                        "iva_efectiva": existente.iva_efectiva,
+                        "herramientas": existente.herramientas,
+                        "gastos_generales": existente.gastos_generales,
+                        "iva_tasa_nominal": existente.iva_tasa_nominal,
+                        "it": existente.it,
+                        "iue": existente.iue,
+                        "ganancia": existente.ganancia,
+                        "a_costo_venta": existente.a_costo_venta,
+                        "b_margen_utilidad": existente.b_margen_utilidad,
+                        "porcentaje_global_100": existente.porcentaje_global_100,
+                    },
+                    status=200,
+                )
 
             id_usuario = data.get("creado_por")
             usuario = Usuario.objects.get(id=id_usuario) if id_usuario else None
@@ -413,7 +560,7 @@ class ProyectoViewSet(viewsets.ModelViewSet):
                 b_margen_utilidad=data.get("b_margen_utilidad", 0),
                 porcentaje_global_100=data.get("porcentaje_global_100", 0),
                 creado_por=usuario,
-                modificado_por=usuario
+                modificado_por=usuario,
             )
 
             serializer = self.get_serializer(proyecto)
@@ -428,13 +575,29 @@ class ProyectoViewSet(viewsets.ModelViewSet):
             data = request.data.copy()
 
             for field in [
-                "NombreProyecto", "carga_social", "iva_efectiva", "herramientas", "gastos_generales",
-                "iva_tasa_nominal", "it", "iue", "ganancia", "a_costo_venta",
-                "b_margen_utilidad", "porcentaje_global_100"
+                "NombreProyecto",
+                "carga_social",
+                "iva_efectiva",
+                "herramientas",
+                "gastos_generales",
+                "iva_tasa_nominal",
+                "it",
+                "iue",
+                "ganancia",
+                "a_costo_venta",
+                "b_margen_utilidad",
+                "porcentaje_global_100",
             ]:
                 if field in data:
-                    setattr(instance, field, data[field] if field != "NombreProyecto" else data[field].strip())
-
+                    setattr(
+                        instance,
+                        field,
+                        (
+                            data[field]
+                            if field != "NombreProyecto"
+                            else data[field].strip()
+                        ),
+                    )
 
             if "modificado_por" in data:
                 usuario = Usuario.objects.get(id=data["modificado_por"])
@@ -446,14 +609,14 @@ class ProyectoViewSet(viewsets.ModelViewSet):
 
         except Usuario.DoesNotExist:
             return Response({"error": "Usuario no encontrado"}, status=400)
-        
+
     def get_queryset(self):
         queryset = super().get_queryset()
-        identificador_id = self.request.query_params.get('identificador', None)
+        identificador_id = self.request.query_params.get("identificador", None)
         if identificador_id is not None:
             queryset = queryset.filter(identificador__id_general=identificador_id)
         return queryset
-    
+
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
 
@@ -465,6 +628,7 @@ class ProyectoViewSet(viewsets.ModelViewSet):
             EquipoHerramienta,
             GastosGenerales,
         )
+
         # Buscar todos los gastos asociados al proyecto
         gastos = GastoOperacion.objects.filter(identificador=instance)
 
@@ -481,31 +645,42 @@ class ProyectoViewSet(viewsets.ModelViewSet):
         instance.delete()
 
         return Response(
-            {"mensaje": "Proyecto y todos sus registros asociados fueron eliminados correctamente."},
-            status=status.HTTP_204_NO_CONTENT
+            {
+                "mensaje": "Proyecto y todos sus registros asociados fueron eliminados correctamente."
+            },
+            status=status.HTTP_204_NO_CONTENT,
         )
+
 
 class GastoOperacionViewSet(viewsets.ModelViewSet):
     queryset = GastoOperacion.objects.all()
     serializer_class = GastoOperacionSerializer
+
     def create(self, request, *args, **kwargs):
         data = request.data
         if not isinstance(data, list):
             return Response({"error": "Se espera una lista de ítems."}, status=400)
 
         identificador_id = None
-        if data and isinstance(data[0], dict) and 'identificador' in data[0]:
-            identificador_data = data[0]['identificador']
-            if isinstance(identificador_data, dict) and 'id_general' in identificador_data:
-                identificador_id = identificador_data['id_general']
+        if data and isinstance(data[0], dict) and "identificador" in data[0]:
+            identificador_data = data[0]["identificador"]
+            if (
+                isinstance(identificador_data, dict)
+                and "id_general" in identificador_data
+            ):
+                identificador_id = identificador_data["id_general"]
 
         if identificador_id:
             try:
                 identificador = Proyecto.objects.get(id_general=identificador_id)
             except Proyecto.DoesNotExist:
-                return Response({"error": "Identificador proporcionado no existe."}, status=400)
+                return Response(
+                    {"error": "Identificador proporcionado no existe."}, status=400
+                )
         else:
-            return Response({"error": "Debe proporcionar un proyecto válido"}, status=400)
+            return Response(
+                {"error": "Debe proporcionar un proyecto válido"}, status=400
+            )
 
         gastos_guardados = []
         for item in data:
@@ -521,31 +696,45 @@ class GastoOperacionViewSet(viewsets.ModelViewSet):
                     precio_unitario=item.get("precio_unitario", 0),
                     precio_literal=item.get("precio_literal"),
                     creado_por=usuario,
-                    modificado_por=usuario
+                    modificado_por=usuario,
                 )
                 gastos_guardados.append(self.get_serializer(gasto).data)
 
             except Usuario.DoesNotExist:
                 return Response({"error": "Usuario no encontrado"}, status=400)
 
-        return Response({
-            "mensaje": "Gastos creados correctamente.",
-            "identificador_general": identificador.id_general,
-            "gastos": gastos_guardados
-        }, status=status.HTTP_201_CREATED)
+        return Response(
+            {
+                "mensaje": "Gastos creados correctamente.",
+                "identificador_general": identificador.id_general,
+                "gastos": gastos_guardados,
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
     def update(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
             data = request.data.copy()
 
-            for field in ["descripcion", "unidad", "cantidad", "precio_unitario", "precio_literal"]:
+            for field in [
+                "descripcion",
+                "unidad",
+                "cantidad",
+                "precio_unitario",
+                "precio_literal",
+            ]:
                 if field in data:
-                    if field in ["cantidad", "precio_unitario"] and data[field] is not None:
+                    if (
+                        field in ["cantidad", "precio_unitario"]
+                        and data[field] is not None
+                    ):
                         try:
                             setattr(instance, field, Decimal(str(data[field])))
                         except Exception:
-                            return Response({"error": f"Valor inválido para {field}"}, status=400)
+                            return Response(
+                                {"error": f"Valor inválido para {field}"}, status=400
+                            )
                     else:
                         setattr(instance, field, data[field])
 
@@ -559,8 +748,7 @@ class GastoOperacionViewSet(viewsets.ModelViewSet):
 
         except Usuario.DoesNotExist:
             return Response({"error": "Usuario no encontrado"}, status=400)
-    
-    
+
     def save(self, *args, **kwargs):
         try:
             cantidad = Decimal(str(self.cantidad or "0"))
@@ -569,6 +757,7 @@ class GastoOperacionViewSet(viewsets.ModelViewSet):
         except (InvalidOperation, TypeError, ValueError):
             self.costo_parcial = Decimal("0")
         super().save(*args, **kwargs)
+
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         instance.delete()
@@ -576,14 +765,18 @@ class GastoOperacionViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        identificador_id = self.request.query_params.get('identificador', None)
+        identificador_id = self.request.query_params.get("identificador", None)
         if identificador_id is not None:
-            queryset = queryset.filter(identificador__id_general=identificador_id)  # Filtrar por el ID del identificador
+            queryset = queryset.filter(
+                identificador__id_general=identificador_id
+            )  # Filtrar por el ID del identificador
         return queryset
+
 
 # =====================================================
 # === =============  seccion 3   === ==================
 # =====================================================
+
 
 class MaterialesViewSet(viewsets.ModelViewSet):
     queryset = Materiales.objects.all()
@@ -596,7 +789,9 @@ class MaterialesViewSet(viewsets.ModelViewSet):
             id_usuario = data.get("creado_por")
 
             if not id_gasto:
-                return Response({"error": "id_gasto_operacion es requerido"}, status=400)
+                return Response(
+                    {"error": "id_gasto_operacion es requerido"}, status=400
+                )
 
             gasto_operacion = GastoOperacion.objects.get(id=id_gasto)
             usuario = Usuario.objects.get(id=id_usuario) if id_usuario else None
@@ -608,7 +803,7 @@ class MaterialesViewSet(viewsets.ModelViewSet):
                 cantidad=data.get("cantidad", 0),
                 precio_unitario=data.get("precio_unitario", 0),
                 total=data.get("total", 0),
-                creado_por=usuario
+                creado_por=usuario,
             )
 
             serializer = self.get_serializer(material)
@@ -627,7 +822,9 @@ class MaterialesViewSet(viewsets.ModelViewSet):
             data = request.data.copy()
 
             if "id_gasto_operacion" in data:
-                gasto_operacion = GastoOperacion.objects.get(id=data["id_gasto_operacion"])
+                gasto_operacion = GastoOperacion.objects.get(
+                    id=data["id_gasto_operacion"]
+                )
                 instance.id_gasto_operacion = gasto_operacion
 
             if "descripcion" in data:
@@ -668,6 +865,7 @@ class MaterialesViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(id_gasto_operacion=id_gasto)
         return queryset
 
+
 class ManoDeObraViewSet(viewsets.ModelViewSet):
     queryset = ManoDeObra.objects.all()
     serializer_class = ManoDeObraSerializer
@@ -679,7 +877,9 @@ class ManoDeObraViewSet(viewsets.ModelViewSet):
             id_usuario = data.get("creado_por")
 
             if not id_gasto:
-                return Response({"error": "id_gasto_operacion es requerido"}, status=400)
+                return Response(
+                    {"error": "id_gasto_operacion es requerido"}, status=400
+                )
 
             gasto_operacion = GastoOperacion.objects.get(id=id_gasto)
             usuario = Usuario.objects.get(id=id_usuario) if id_usuario else None
@@ -691,7 +891,7 @@ class ManoDeObraViewSet(viewsets.ModelViewSet):
                 cantidad=data.get("cantidad", 0),
                 precio_unitario=data.get("precio_unitario", 0),
                 total=data.get("total", 0),
-                creado_por=usuario
+                creado_por=usuario,
             )
 
             serializer = self.get_serializer(mano)
@@ -710,7 +910,9 @@ class ManoDeObraViewSet(viewsets.ModelViewSet):
             data = request.data.copy()
 
             if "id_gasto_operacion" in data:
-                gasto_operacion = GastoOperacion.objects.get(id=data["id_gasto_operacion"])
+                gasto_operacion = GastoOperacion.objects.get(
+                    id=data["id_gasto_operacion"]
+                )
                 instance.id_gasto_operacion = gasto_operacion
 
             if "descripcion" in data:
@@ -751,7 +953,6 @@ class ManoDeObraViewSet(viewsets.ModelViewSet):
         return queryset
 
 
-
 class EquipoHerramientaViewSet(viewsets.ModelViewSet):
     queryset = EquipoHerramienta.objects.all()
     serializer_class = EquipoHerramientaSerializer
@@ -763,7 +964,9 @@ class EquipoHerramientaViewSet(viewsets.ModelViewSet):
             id_usuario = data.get("creado_por")
 
             if not id_gasto:
-                return Response({"error": "id_gasto_operacion es requerido"}, status=400)
+                return Response(
+                    {"error": "id_gasto_operacion es requerido"}, status=400
+                )
 
             gasto_operacion = GastoOperacion.objects.get(id=id_gasto)
             usuario = Usuario.objects.get(id=id_usuario) if id_usuario else None
@@ -775,7 +978,7 @@ class EquipoHerramientaViewSet(viewsets.ModelViewSet):
                 cantidad=data.get("cantidad", 0),
                 precio_unitario=data.get("precio_unitario", 0),
                 total=data.get("total", 0),
-                creado_por=usuario
+                creado_por=usuario,
             )
 
             serializer = self.get_serializer(equipo)
@@ -794,7 +997,9 @@ class EquipoHerramientaViewSet(viewsets.ModelViewSet):
             data = request.data.copy()
 
             if "id_gasto_operacion" in data:
-                gasto_operacion = GastoOperacion.objects.get(id=data["id_gasto_operacion"])
+                gasto_operacion = GastoOperacion.objects.get(
+                    id=data["id_gasto_operacion"]
+                )
                 instance.id_gasto_operacion = gasto_operacion
 
             if "descripcion" in data:
@@ -834,6 +1039,7 @@ class EquipoHerramientaViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(id_gasto_operacion=id_gasto)
         return queryset
 
+
 class GastosGeneralesViewSet(viewsets.ModelViewSet):
     queryset = GastosGenerales.objects.all()
     serializer_class = GastosGeneralesSerializer
@@ -849,7 +1055,7 @@ class GastosGeneralesViewSet(viewsets.ModelViewSet):
             if not id_gasto:
                 return Response(
                     {"error": "id_gasto_operacion es requerido"},
-                    status=status.HTTP_400_BAD_REQUEST
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
 
             gasto_operacion = GastoOperacion.objects.get(id=id_gasto)
@@ -860,16 +1066,21 @@ class GastosGeneralesViewSet(viewsets.ModelViewSet):
             gasto_general = GastosGenerales.objects.create(
                 id_gasto_operacion=gasto_operacion,
                 total=data.get("total", 0),
-                creado_por=usuario
+                creado_por=usuario,
             )
 
             serializer = self.get_serializer(gasto_general)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         except GastoOperacion.DoesNotExist:
-            return Response({"error": "GastoOperacion no encontrado"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "GastoOperacion no encontrado"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         except Usuario.DoesNotExist:
-            return Response({"error": "Usuario no encontrado"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Usuario no encontrado"}, status=status.HTTP_400_BAD_REQUEST
+            )
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -880,10 +1091,15 @@ class GastosGeneralesViewSet(viewsets.ModelViewSet):
 
             if "id_gasto_operacion" in data:
                 try:
-                    gasto_operacion = GastoOperacion.objects.get(id=data["id_gasto_operacion"])
+                    gasto_operacion = GastoOperacion.objects.get(
+                        id=data["id_gasto_operacion"]
+                    )
                     instance.id_gasto_operacion = gasto_operacion
                 except GastoOperacion.DoesNotExist:
-                    return Response({"error": "GastoOperacion no encontrado"}, status=status.HTTP_400_BAD_REQUEST)
+                    return Response(
+                        {"error": "GastoOperacion no encontrado"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
 
             if "total" in data:
                 instance.total = data["total"]
@@ -894,23 +1110,25 @@ class GastosGeneralesViewSet(viewsets.ModelViewSet):
                     usuario = Usuario.objects.get(id=data["modificado_por"])
                     instance.modificado_por = usuario
                 except Usuario.DoesNotExist:
-                    return Response({"error": "Usuario no encontrado"}, status=status.HTTP_400_BAD_REQUEST)
+                    return Response(
+                        {"error": "Usuario no encontrado"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
 
             instance.save()
             serializer = self.get_serializer(instance)
             return Response(serializer.data)
 
         except GastosGenerales.DoesNotExist:
-            return Response({"error": "Registro no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": "Registro no encontrado"}, status=status.HTTP_404_NOT_FOUND
+            )
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        
+
     def get_queryset(self):
         queryset = super().get_queryset()
         id_gasto = self.request.query_params.get("id_gasto_operacion")
         if id_gasto:
             queryset = queryset.filter(id_gasto_operacion=id_gasto)
         return queryset
-
-
-

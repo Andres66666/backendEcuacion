@@ -11,10 +11,6 @@ git remote add origin https://github.com/Andres66666/FrontendEcuacion.git
 git push -u origin main
 
 
-
-
-
-
 git config --global user.name "Andrés66666"
 git config --global user.email "cya2024773@est.univalle.edu"
 
