@@ -79,7 +79,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "main.wsgi.application"
 
-DATABASES = {
+""" DATABASES = {
     "default": {
         "ENGINE": config("DB_DEFAULT_ENGINE", default="django.db.backends.postgresql"),
         "NAME": config("DB_DEFAULT_NAME", default="Ecuacion"),
@@ -102,6 +102,21 @@ DATABASES = {
         "PORT": config("DB_SECOND_PORT", default="5432"),
         # Si la DB remota requiere SSL, puedes añadir OPTIONS:
         # "OPTIONS": {"sslmode": "require"},
+    },
+} """
+DATABASES = {
+    "default": {
+        "ENGINE": config("DB_SECOND_ENGINE", default="django.db.backends.postgresql"),
+        "NAME": config("DB_SECOND_NAME", default="ecuacion"),
+        "USER": config("DB_SECOND_USER", default="ecuacion_user"),
+        "PASSWORD": config(
+            "DB_SECOND_PASSWORD", default="aPNuMZDruvJcndzpKOwycaTecZYJMMu0"
+        ),
+        "HOST": config(
+            "DB_SECOND_HOST",
+            default="dpg-d38se1nfte5s73cc7j6g-a.oregon-postgres.render.com",
+        ),
+        "PORT": config("DB_SECOND_PORT", default="5432"),
     },
 }
 # Password validation
