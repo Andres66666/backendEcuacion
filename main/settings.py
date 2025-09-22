@@ -194,6 +194,12 @@ SQLI_DEFENSE_TRUSTED_IPS = [
     "127.0.0.1",  # localhost
     "192.168.0.4",  # tu máquina interna, por ejemplo
 ]
+# Excepciones de rutas para el middleware de SQLIDefense
+SQLI_DEFENSE_EXEMPT_PATHS = [
+    "/api/login/",  # login
+    "/api/register/",  # si tienes registro
+    "/api/token/",  # JWT
+]
 
 # ejecuta este comando para probar el ataque en termux
 # python manage.py runserver 0.0.0.0:8000
