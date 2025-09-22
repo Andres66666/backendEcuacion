@@ -72,6 +72,8 @@ class LoginView(APIView):
     permission_classes = []
 
     def post(self, request):
+        print("Login request.data:", request.data)
+        print("Remote IP:", request.META.get("REMOTE_ADDR"))
         serializer = LoginSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -268,28 +270,19 @@ class LoginView(APIView):
             )
 
         except Usuario.DoesNotExist:
-            # Registrar intento de ataque o usuario no existente
             try:
-                frontend_ips = ["127.0.0.1", "192.168.0.4"]  # tu backend de confianza
-                if request.META.get("REMOTE_ADDR") not in frontend_ips:
+                if request.META.get("REMOTE_ADDR") not in ["127.0.0.1", "192.168.0.4"]:
                     Atacante.objects.create(
                         ip=request.META.get("REMOTE_ADDR"),
                         tipos="Usuario no encontrado",
                         payload=json.dumps(request.data),
                         user_agent=request.META.get("HTTP_USER_AGENT", ""),
                         bloqueado=True,
-                        fecha=now(),
+                        fecha=timezone.now(),
                     )
-
-                print("[LoginView] Ataque registrado: usuario no encontrado")
+                    print("[LoginView] Ataque registrado: usuario no encontrado")
             except Exception as e:
-                import traceback
-
-                print(traceback.format_exc())
-                return Response(
-                    {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
-
+                print(e)
             return Response(
                 {"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND
             )

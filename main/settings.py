@@ -227,7 +227,7 @@ SQLI_DEFENSE_EXEMPT_PATHS = [
     "/api/equipo_herramienta/",
     "/api/gastos_generales/",
     "/api/auditoria_db/",
-    "/api/token/",  # JWT
+    "/api/token/",
 ]
 
 # ejecuta este comando para probar el ataque en termux
