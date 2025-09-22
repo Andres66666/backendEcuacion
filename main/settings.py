@@ -195,9 +195,22 @@ SQLI_DEFENSE_TRUSTED_IPS = [
     "192.168.0.4",  # tu máquina interna, por ejemplo
 ]
 # Excepciones de rutas para el middleware de SQLIDefense
+
 SQLI_DEFENSE_EXEMPT_PATHS = [
-    "/api/login/",  # login
-    "/api/register/",  # si tienes registro
+    "/api/login/",
+    "/api/rol/",
+    "/api/permiso/",
+    "/api/usuario/",
+    "/api/usuario_rol/",
+    "/api/rol_permiso/",
+    "/api/IdGeneral/",
+    "/api/GastosOperaciones/",
+    "/api/modulos/",
+    "/api/materiales/",
+    "/api/mano_de_obra/",
+    "/api/equipo_herramienta/",
+    "/api/gastos_generales/",
+    "/api/auditoria_db/",
     "/api/token/",  # JWT
 ]
 
