@@ -7,6 +7,7 @@ from .models import (
     EquipoHerramienta,
     GastoOperacion,
     GastosGenerales,
+    Modulo,
     Proyecto,
     ManoDeObra,
     Materiales,
@@ -21,6 +22,7 @@ from .serializers import (
     EquipoHerramientaSerializer,
     GastoOperacionSerializer,
     GastosGeneralesSerializer,
+    ModuloSerializer,
     ProyectoSerializer,
     LoginSerializer,
     ManoDeObraSerializer,
@@ -88,45 +90,71 @@ class LoginView(APIView):
                 ),
             ).get(correo=correo)
 
+            es_admin = "Administrador" in [
+                ur.rol.nombre for ur in usuario.usuariorol_set.all()
+            ]
+
             if not usuario.estado:
                 return Response(
-                    {"error": "Usuario desactivado."}, status=status.HTTP_403_FORBIDDEN
+                    {
+                        "error": "Usuario desactivado. Contacte al administrador.",
+                        "tipo_mensaje": "error",
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
                 )
 
-            if usuario.intentos_fallidos >= 3:
-                if (
-                    usuario.ultimo_intento
-                    and now() - usuario.ultimo_intento < timedelta(minutes=10)
-                ):
+            # ==============================
+            # INTENTOS FALLIDOS (EXENTO PARA ADMIN)
+            # ==============================
+            if not check_password(password, usuario.password):
+                if not es_admin:  # ← NUEVO: Solo aplica a no-admins
+                    if usuario.intentos_fallidos >= 3:
+                        if (
+                            usuario.ultimo_intento
+                            and timezone.now() - usuario.ultimo_intento
+                            < timedelta(minutes=10)
+                        ):
+                            return Response(
+                                {
+                                    "error": "Demasiados intentos fallidos. Intente nuevamente en 10 minutos.",
+                                    "tipo_mensaje": "error",
+                                },
+                                status=status.HTTP_403_FORBIDDEN,
+                            )
+
+                    usuario.intentos_fallidos += 1
+                    usuario.ultimo_intento = timezone.now()
+
+                    # Mensajes según intento (solo para no-admins)
+                    if usuario.intentos_fallidos == 1:
+                        mensaje_error = "Credenciales incorrectas. Intento 1 de 3."
+                    elif usuario.intentos_fallidos == 2:
+                        mensaje_error = "Credenciales incorrectas. Intento 2 de 3. Contacte con el administrador si olvidó su contraseña."
+                    elif usuario.intentos_fallidos >= 3:
+                        usuario.estado = False  # Inactiva solo si no es admin
+                        mensaje_error = "Credenciales incorrectas. Intentos superados. Cuenta inhabilitada, comuníquese con el administrador."
+
+                    usuario.save()
+                    return Response(
+                        {"error": mensaje_error, "tipo_mensaje": "error"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                else:
+                    # Para admin: Solo mensaje suave, sin incrementar contadores
                     return Response(
                         {
-                            "error": "Demasiados intentos fallidos. Intente nuevamente en 10 minutos."
+                            "error": "Credenciales incorrectas. Como administrador, revise sus datos sin penalizaciones.",
+                            "tipo_mensaje": "advertencia",
                         },
-                        status=status.HTTP_403_FORBIDDEN,
+                        status=status.HTTP_400_BAD_REQUEST,
                     )
 
-            if not check_password(password, usuario.password):
-                usuario.intentos_fallidos += 1
-                usuario.ultimo_intento = now()
-
-                # Mensajes según intento
-                if usuario.intentos_fallidos == 1:
-                    mensaje_error = "Credenciales incorrectas. Intento 1 de 3."
-                elif usuario.intentos_fallidos == 2:
-                    mensaje_error = "Credenciales incorrectas. Intento 2 de 3. Contactece con el administrador si olvidó su contraseña."
-                elif usuario.intentos_fallidos >= 3:
-                    usuario.estado = False  # Inactiva la cuenta
-                    mensaje_error = "Credenciales incorrectas. Intentos superados. Cuenta inhabilitada, comuníquese con el administrador."
-
-                usuario.save()
-                return Response(
-                    {"error": mensaje_error}, status=status.HTTP_400_BAD_REQUEST
-                )
-
-            # Reset de intentos fallidos
+            # ==============================
+            # LOGIN EXITOSO: Reset contadores (siempre)
+            # ==============================
             usuario.intentos_fallidos = 0
             usuario.logins_exitosos += 1
-            usuario.ultimo_intento = now()
+            usuario.ultimo_intento = timezone.now()
             usuario.save()
 
             roles = [ur.rol.nombre for ur in usuario.usuariorol_set.all()]
@@ -136,51 +164,72 @@ class LoginView(APIView):
 
             if not roles or not permisos:
                 return Response(
-                    {"error": "El usuario no tiene roles ni permisos asignados."},
+                    {
+                        "error": "El usuario no tiene roles ni permisos asignados.",
+                        "tipo_mensaje": "error",
+                    },
                     status=status.HTTP_403_FORBIDDEN,
                 )
 
             refresh = RefreshToken.for_user(usuario)
             access_token = str(refresh.access_token)
 
+            # ... (resto del código igual hasta la sección de MENSAJES DE INICIO DE SESIÓN)
+
             # ==============================
-            # Mensajes de inicio de sesión
+            # MENSAJES DE INICIO DE SESIÓN
             # ==============================
             mensaje_principal = "¡Inicio de sesión exitoso!"
             mensaje_adicional = ""
-
-            if "Administrador" not in roles:
-                # Solo si NO es admin aplican estas reglas
-                if not usuario.fecha_cambio_password:  # nunca cambió contraseña
+            tipo_mensaje = "exito"
+            dias_transcurridos = 0
+            requiere_cambio_password = False
+            mensaje_urgente = (
+                False  # ← NUEVO: Flag para mensajes que requieren lectura manual
+            )
+            if not es_admin:  # ← Solo aplica reglas a no-admins
+                # Control de primer login / cambio obligatorio
+                if not usuario.fecha_cambio_password:  # Nunca cambió contraseña
                     if usuario.logins_exitosos == 1:
                         mensaje_adicional = (
                             "Cambie su contraseña, este es su primer inicio de sesión."
                         )
+                        requiere_cambio_password = True
+                        mensaje_urgente = True  # ← NUEVO: Requiere cierre manual
+                        tipo_mensaje = "advertencia_urgente"  # ← NUEVO: Tipo especial
                     elif usuario.logins_exitosos == 2:
-                        mensaje_adicional = "Debe cambiar su contraseña obligatoriamente, este es su segundo inicio de sesión."
+                        mensaje_adicional = "Debe cambiar su contraseña obligatoriamente, este es su segundo inicio de sesión. despues de este inicio de sesion sera bloqueada la cuenta si no cambia la contraseña"
+                        requiere_cambio_password = True
+                        mensaje_urgente = True  # ← NUEVO: Requiere cierre manual
+                        tipo_mensaje = "advertencia_urgente"  # ← NUEVO: Tipo especial
                     elif usuario.logins_exitosos >= 3:
                         usuario.estado = False
                         usuario.save()
                         return Response(
-                            {"error": "Cuenta bloqueada por no cambiar contraseña."},
+                            {
+                                "error": "Cuenta bloqueada por no cambiar contraseña. Comuniquese con el administrador",
+                                "tipo_mensaje": "error",
+                            },
                             status=status.HTTP_403_FORBIDDEN,
                         )
 
-            # ==============================
-            # Control de caducidad de contraseña ..
-            # ==============================
-            mensaje_adicional = ""
-            if usuario.fecha_cambio_password:
-                dias_transcurridos = (
-                    now().date() - usuario.fecha_cambio_password.date()
-                ).days
+                # Control de caducidad (solo para no-admins)
+                if usuario.fecha_cambio_password:
+                    dias_transcurridos = (
+                        timezone.now().date() - usuario.fecha_cambio_password.date()
+                    ).days
+                else:
+                    dias_transcurridos = (
+                        timezone.now().date() - usuario.fecha_creacion.date()
+                    ).days
 
                 if dias_transcurridos >= 90:
                     usuario.estado = False
                     usuario.save()
                     return Response(
                         {
-                            "error": "Su contraseña ha caducado y su cuenta fue desactivada por incumplimiento de normas."
+                            "error": "Su contraseña ha caducado y su cuenta fue desactivada por incumplimiento de normas.",
+                            "tipo_mensaje": "error",
                         },
                         status=status.HTTP_403_FORBIDDEN,
                     )
@@ -188,30 +237,16 @@ class LoginView(APIView):
                     mensaje_adicional = (
                         "Debe cambiar su contraseña de forma obligatoria. Día 89."
                     )
+                    requiere_cambio_password = True
+                    tipo_mensaje = "advertencia"
                 elif dias_transcurridos == 88:
                     mensaje_adicional = (
                         "Advertencia: su contraseña caducará pronto. Día 88."
                     )
+                    tipo_mensaje = "advertencia"
             else:
-                # Si nunca cambió contraseña, se empieza a contar desde la fecha de creación
-                dias_transcurridos = (now().date() - usuario.fecha_creacion.date()).days
-                if dias_transcurridos >= 90:
-                    usuario.estado = False
-                    usuario.save()
-                    return Response(
-                        {
-                            "error": "Su contraseña ha caducado y su cuenta fue desactivada por incumplimiento de normas."
-                        },
-                        status=status.HTTP_403_FORBIDDEN,
-                    )
-                elif dias_transcurridos == 89:
-                    mensaje_adicional = (
-                        "Debe cambiar su contraseña de forma obligatoria. Día 89."
-                    )
-                elif dias_transcurridos == 88:
-                    mensaje_adicional = (
-                        "Advertencia: su contraseña caducará pronto. Día 88."
-                    )
+                # Para admin: Mensaje simple
+                mensaje_adicional = "Bienvenido, administrador. Acceso completo."
 
             return Response(
                 {
@@ -224,7 +259,10 @@ class LoginView(APIView):
                     "usuario_id": usuario.id,
                     "mensaje": mensaje_principal,
                     "mensaje_adicional": mensaje_adicional,
+                    "tipo_mensaje": tipo_mensaje,
                     "dias_transcurridos": dias_transcurridos,
+                    "requiere_cambio_password": requiere_cambio_password,
+                    "mensaje_urgente": mensaje_urgente,  # ← NUEVO: Para manejo en frontend
                 },
                 status=status.HTTP_200_OK,
             )
@@ -376,12 +414,20 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             # Mantener imagen actual si no se sube nueva
             data["imagen_url"] = instance.imagen_url
 
-        # ⚡ Detectar cambio de contraseña
+        # ⚡ Detectar cambio de contraseña y reset de intentos fallidos
         nueva_password = data.get("password")
+        cambio_password = False
         if nueva_password and not check_password(nueva_password, instance.password):
             # Solo si es distinta de la actual
             data["password"] = make_password(nueva_password)
             data["fecha_cambio_password"] = timezone.now()
+            cambio_password = True  # ← NUEVO: Flag para reset
+
+        # ⚡ Detectar reactivación de usuario (estado False → True) y reset de intentos fallidos
+        nuevo_estado = data.get("estado", instance.estado)  # Usa actual si no se envía
+        reactivacion = (
+            not instance.estado
+        ) and nuevo_estado  # ← NUEVO: Solo si era False y ahora True
 
         # Eliminar archivo accidental
         if "imagen_url" in request.FILES:
@@ -392,6 +438,18 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         if not serializer.is_valid():
             print("Errores del serializer:", serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # ← NUEVO: Aplicar resets antes de guardar
+        if cambio_password or reactivacion:
+            instance.intentos_fallidos = 0  # Reset en ambos casos
+            if cambio_password:
+                print(
+                    f"Contraseña cambiada para usuario {instance.id}: intentos fallidos reseteados a 0"
+                )
+            if reactivacion:
+                print(
+                    f"Usuario {instance.id} reactivado: intentos fallidos reseteados a 0"
+                )
 
         serializer.save()
         return Response(serializer.data)
@@ -652,6 +710,68 @@ class ProyectoViewSet(viewsets.ModelViewSet):
         )
 
 
+# Sección 2
+class ModuloViewSet(viewsets.ModelViewSet):
+    queryset = Modulo.objects.all()
+    serializer_class = ModuloSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        proyecto_id = self.request.query_params.get("proyecto", None)
+        if proyecto_id:
+            queryset = queryset.filter(proyecto_id=proyecto_id)
+        return queryset
+
+    def create(self, request, *args, **kwargs):
+        data = request.data.copy()
+        try:
+            proyecto_id = data.get("proyecto")  # ID del proyecto
+            if not proyecto_id:
+                return Response(
+                    {"error": "Debe proporcionar un proyecto válido"}, status=400
+                )
+
+            proyecto = Proyecto.objects.get(id_general=proyecto_id)
+            id_usuario = data.get("creado_por")
+            usuario = Usuario.objects.get(id=id_usuario) if id_usuario else None
+
+            modulo = Modulo.objects.create(
+                proyecto=proyecto,
+                codigo=data.get("codigo", "").strip(),
+                nombre=data.get("nombre", "").strip(),
+                creado_por=usuario,
+                modificado_por=usuario,
+            )
+
+            serializer = self.get_serializer(modulo)
+            return Response(serializer.data, status=201)
+
+        except Proyecto.DoesNotExist:
+            return Response({"error": "Proyecto no encontrado"}, status=400)
+        except Usuario.DoesNotExist:
+            return Response({"error": "Usuario no encontrado"}, status=400)
+
+    def update(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            data = request.data.copy()
+
+            for field in ["codigo", "nombre"]:
+                if field in data:
+                    setattr(instance, field, data[field].strip())
+
+            if "modificado_por" in data:
+                usuario = Usuario.objects.get(id=data["modificado_por"])
+                instance.modificado_por = usuario
+
+            instance.save()
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data)
+
+        except Usuario.DoesNotExist:
+            return Response({"error": "Usuario no encontrado"}, status=400)
+
+
 class GastoOperacionViewSet(viewsets.ModelViewSet):
     queryset = GastoOperacion.objects.all()
     serializer_class = GastoOperacionSerializer
@@ -683,25 +803,25 @@ class GastoOperacionViewSet(viewsets.ModelViewSet):
             )
 
         gastos_guardados = []
-        for item in data:
-            try:
-                id_usuario = item.get("creado_por")
-                usuario = Usuario.objects.get(id=id_usuario) if id_usuario else None
+        for item_data in data:  # Cambiado: usa item_data para serializer
+            # Usa el serializer para validar y mapear (incluyendo modulo_id → modulo)
+            serializer = self.get_serializer(data=item_data)
+            if serializer.is_valid():
+                # Maneja usuario manualmente (no viene en serializer)
+                id_usuario = item_data.get("creado_por")
+                if id_usuario:
+                    try:
+                        usuario = Usuario.objects.get(id=id_usuario)
+                        serializer.validated_data["creado_por"] = usuario
+                        serializer.validated_data["modificado_por"] = usuario
+                    except Usuario.DoesNotExist:
+                        return Response({"error": "Usuario no encontrado"}, status=400)
 
-                gasto = GastoOperacion.objects.create(
-                    identificador=identificador,
-                    descripcion=item.get("descripcion"),
-                    unidad=item.get("unidad"),
-                    cantidad=item.get("cantidad", 0),
-                    precio_unitario=item.get("precio_unitario", 0),
-                    precio_literal=item.get("precio_literal"),
-                    creado_por=usuario,
-                    modificado_por=usuario,
-                )
-                gastos_guardados.append(self.get_serializer(gasto).data)
-
-            except Usuario.DoesNotExist:
-                return Response({"error": "Usuario no encontrado"}, status=400)
+                # Serializer guarda automáticamente (modulo_id se mapea a modulo)
+                gasto = serializer.save(identificador=identificador)
+                gastos_guardados.append(serializer.data)
+            else:
+                return Response({"error": serializer.errors}, status=400)
 
         return Response(
             {
@@ -713,41 +833,23 @@ class GastoOperacionViewSet(viewsets.ModelViewSet):
         )
 
     def update(self, request, *args, **kwargs):
-        try:
-            instance = self.get_object()
-            data = request.data.copy()
+        instance = self.get_object()
+        # Usa serializer con partial=True para updates parciales (e.g., solo modulo_id)
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
 
-            for field in [
-                "descripcion",
-                "unidad",
-                "cantidad",
-                "precio_unitario",
-                "precio_literal",
-            ]:
-                if field in data:
-                    if (
-                        field in ["cantidad", "precio_unitario"]
-                        and data[field] is not None
-                    ):
-                        try:
-                            setattr(instance, field, Decimal(str(data[field])))
-                        except Exception:
-                            return Response(
-                                {"error": f"Valor inválido para {field}"}, status=400
-                            )
-                    else:
-                        setattr(instance, field, data[field])
+        # Maneja usuario modificado (no viene en serializer)
+        id_usuario = request.data.get("modificado_por")
+        if id_usuario:
+            try:
+                usuario = Usuario.objects.get(id=id_usuario)
+                serializer.validated_data["modificado_por"] = usuario
+            except Usuario.DoesNotExist:
+                return Response({"error": "Usuario no encontrado"}, status=400)
 
-            if "modificado_por" in data:
-                usuario = Usuario.objects.get(id=data["modificado_por"])
-                instance.modificado_por = usuario
-
-            instance.save()
-            serializer = self.get_serializer(instance)
-            return Response(serializer.data)
-
-        except Usuario.DoesNotExist:
-            return Response({"error": "Usuario no encontrado"}, status=400)
+        # Serializer maneja todo: mapea modulo_id → modulo y guarda
+        serializer.save()
+        return Response(serializer.data)
 
     def save(self, *args, **kwargs):
         try:

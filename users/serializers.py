@@ -3,6 +3,7 @@ from rest_framework import serializers
 from .models import (
     Atacante,
     GastoOperacion,
+    Modulo,
     Proyecto,
     Rol,
     Permiso,
@@ -79,15 +80,29 @@ class ProyectoSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class ModuloSerializer(serializers.ModelSerializer):
+    proyecto = ProyectoSerializer(read_only=True)
+
+    class Meta:
+        model = Modulo
+        fields = "__all__"
+
+
 class GastoOperacionSerializer(serializers.ModelSerializer):
-    identificador = ProyectoSerializer(
-        read_only=True
-    )  # Asegúrate de que esto esté aquí
+    identificador = ProyectoSerializer(read_only=True)
+    modulo = ModuloSerializer(read_only=True)  # Para output: objeto completo
+    modulo_id = serializers.PrimaryKeyRelatedField(  # Para input: ID o null
+        queryset=Modulo.objects.all(),
+        source="modulo",  # Mapea "modulo_id" → campo 'modulo'
+        required=False,
+        allow_null=True,
+        write_only=True,  # No se incluye en output
+    )
     usuario = UsuarioSerializer(read_only=True)
 
     class Meta:
         model = GastoOperacion
-        fields = "__all__"
+        fields = "__all__"  # Incluye modulo_id automáticamente
 
 
 # =====================================================

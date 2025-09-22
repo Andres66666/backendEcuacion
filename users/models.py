@@ -5,6 +5,7 @@ from decimal import Decimal
 import uuid
 from django.db import models
 from django.contrib.auth.hashers import make_password
+from decimal import Decimal, InvalidOperation
 
 
 # =====================================================
@@ -105,8 +106,44 @@ class Proyecto(models.Model):
         return f"Registro #{self.id_general}"
 
 
+# cambios nuevos modulo
+
+
+# ... (código existente de secciones 1 y 2) ...
+class Modulo(models.Model):
+    proyecto = models.ForeignKey(
+        Proyecto, on_delete=models.CASCADE, related_name="modulos"
+    )
+    codigo = models.CharField(
+        max_length=50
+    )  # Código único por proyecto si es necesario
+    nombre = models.CharField(max_length=255)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+    creado_por = models.ForeignKey(
+        Usuario, on_delete=models.SET_NULL, null=True, related_name="modulos_creados"
+    )
+    modificado_por = models.ForeignKey(
+        Usuario,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="modulos_modificados",
+    )
+
+    class Meta:
+        unique_together = ("proyecto", "codigo")  # Código único por proyecto
+
+    def __str__(self):
+        return (
+            f"{self.codigo} - {self.nombre} (Proyecto: {self.proyecto.NombreProyecto})"
+        )
+
+
 class GastoOperacion(models.Model):
     identificador = models.ForeignKey(Proyecto, on_delete=models.CASCADE, null=False)
+    modulo = models.ForeignKey(  # Nuevo campo: opcional
+        Modulo, on_delete=models.SET_NULL, null=True, blank=True, related_name="gastos"
+    )
     descripcion = models.CharField(max_length=255)
     unidad = models.CharField(max_length=50)
     cantidad = models.DecimalField(max_digits=10, decimal_places=2)
@@ -123,13 +160,26 @@ class GastoOperacion(models.Model):
     )
 
     def save(self, *args, **kwargs):
-        self.costo_parcial = (self.cantidad or Decimal("0")) * (
-            self.precio_unitario or Decimal("0")
-        )
+        try:
+            cantidad_decimal = (
+                Decimal(str(self.cantidad)) if self.cantidad else Decimal("0")
+            )
+        except InvalidOperation:
+            cantidad_decimal = Decimal("0")
+        try:
+            precio_decimal = (
+                Decimal(str(self.precio_unitario))
+                if self.precio_unitario
+                else Decimal("0")
+            )
+        except InvalidOperation:
+            precio_decimal = Decimal("0")
+        self.costo_parcial = cantidad_decimal * precio_decimal
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.descripcion} ({self.cantidad} {self.unidad} @ {self.precio_unitario})"
+        modulo_str = f" (Módulo: {self.modulo.nombre})" if self.modulo else ""
+        return f"{self.descripcion}{modulo_str} ({self.cantidad} {self.unidad} @ {self.precio_unitario})"
 
 
 # =====================================================

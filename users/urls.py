@@ -17,6 +17,7 @@ router.register(r"rol_permiso", views.RolPermisoViewSet)
 
 router.register(r"IdGeneral", views.ProyectoViewSet)
 router.register(r"GastosOperaciones", views.GastoOperacionViewSet)
+router.register(r"modulos", views.ModuloViewSet)
 # =====================================================
 # === =============  seccion 3   === ==================
 # =====================================================
