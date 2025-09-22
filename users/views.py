@@ -280,7 +280,12 @@ class LoginView(APIView):
                 )
                 print("[LoginView] Ataque registrado: usuario no encontrado")
             except Exception as e:
-                print("Error guardando ataque:", e)
+                import traceback
+
+                print(traceback.format_exc())
+                return Response(
+                    {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
 
             return Response(
                 {"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND
