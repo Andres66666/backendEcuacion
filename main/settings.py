@@ -6,9 +6,6 @@ import os
 from decouple import config
 import cloudinary
 
-# en settings.py (parte DATABASES)
-from decouple import config, Csv
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -18,12 +15,16 @@ SECRET_KEY = "django-insecure-(fn$sd-g@*)51f7)nc!a^3xeb(ma^9f6pm02_a+2h6tw^251fq
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = [
-    "backendecuacion.onrender.com",
-    "192.168.0.4",
-    "localhost",
-    "127.0.0.1",
-]
+
+# ALLOWED_HOSTS = ["backendecuacion.onrender.com", "localhost", "127.0.0.1"]
+# esto es para probar termux
+# "192.168.0.4",  # PROTEGEMOS LA IP DE LA MAQUINA O DEL SERVIDOR
+
+""" ALLOWED_HOSTS = ["192.168.0.4", "localhost", "127.0.0.1"] """
+# o temporalmente:
+# ALLOWED_HOSTS = ["*"]
+
+ALLOWED_HOSTS = ["backendecuacion.onrender.com", "localhost", "127.0.0.1"]
 
 # Application definition
 INSTALLED_APPS = [
@@ -78,47 +79,30 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "main.wsgi.application"
-
 """ DATABASES = {
     "default": {
-        "ENGINE": config("DB_DEFAULT_ENGINE", default="django.db.backends.postgresql"),
-        "NAME": config("DB_DEFAULT_NAME", default="Ecuacion"),
-        "USER": config("DB_DEFAULT_USER", default="postgres"),
-        "PASSWORD": config("DB_DEFAULT_PASSWORD", default="13247291"),
-        "HOST": config("DB_DEFAULT_HOST", default="localhost"),
-        "PORT": config("DB_DEFAULT_PORT", default="5432"),
-    },
-    "secondary": {  # nombre de la BD remota en la nube
-        "ENGINE": config("DB_SECOND_ENGINE", default="django.db.backends.postgresql"),
-        "NAME": config("DB_SECOND_NAME", default="ecucaion"),
-        "USER": config("DB_SECOND_USER", default="ecucaion_user"),
-        "PASSWORD": config(
-            "DB_SECOND_PASSWORD", default="52mXFFSYOxIe5idbW2GOqPVcYkPZT1r8"
-        ),
-        "HOST": config(
-            "DB_SECOND_HOST",
-            default="dpg-d2n0g9qdbo4c73fakr90-a.oregon-postgres.render.com",
-        ),
-        "PORT": config("DB_SECOND_PORT", default="5432"),
-        # Si la DB remota requiere SSL, puedes añadir OPTIONS:
-        # "OPTIONS": {"sslmode": "require"},
-    },
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "Ecuacion",
+        "USER": "postgres",
+        "PASSWORD": "13247291",
+        "HOST": "localhost",
+        "PORT": "5432",
+    }
 } """
+
 DATABASES = {
     "default": {
-        "ENGINE": config("DB_SECOND_ENGINE", default="django.db.backends.postgresql"),
-        "NAME": config("DB_SECOND_NAME", default="ecuacion"),
-        "USER": config("DB_SECOND_USER", default="ecuacion_user"),
-        "PASSWORD": config(
-            "DB_SECOND_PASSWORD", default="aPNuMZDruvJcndzpKOwycaTecZYJMMu0"
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("DB_NAME", "ecuacion"),
+        "USER": os.getenv("DB_USER", "ecuacion_user"),
+        "PASSWORD": os.getenv("DB_PASSWORD", "aPNuMZDruvJcndzpKOwycaTecZYJMMu0"),
+        "HOST": os.getenv(
+            "DB_HOST", "dpg-d38se1nfte5s73cc7j6g-a.oregon-postgres.render.com"
         ),
-        "HOST": config(
-            "DB_SECOND_HOST",
-            default="dpg-d38se1nfte5s73cc7j6g-a.oregon-postgres.render.com",
-        ),
-        "PORT": config("DB_SECOND_PORT", default="5432"),
-    },
+        "PORT": os.getenv("DB_PORT", "5432"),
+    }
 }
+
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
