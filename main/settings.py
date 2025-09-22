@@ -146,6 +146,17 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:4200",
     "https://mallafinita.netlify.app",
 ]
+
+
+# Permitir cabeceras custom si tu Angular envía Authorization o Content-Type
+from corsheaders.defaults import default_headers
+
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    "content-type",
+    "authorization",
+    "x-requested-with",
+]
+
 CSRF_TRUSTED_ORIGINS = ["https://mallafinita.netlify.app"]
 CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()

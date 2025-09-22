@@ -270,14 +270,17 @@ class LoginView(APIView):
         except Usuario.DoesNotExist:
             # Registrar intento de ataque o usuario no existente
             try:
-                Atacante.objects.create(
-                    ip=request.META.get("REMOTE_ADDR"),
-                    tipos="Usuario no encontrado",
-                    payload=json.dumps(request.data),
-                    user_agent=request.META.get("HTTP_USER_AGENT", ""),
-                    bloqueado=True,
-                    fecha=now(),
-                )
+                frontend_ips = ["127.0.0.1", "192.168.0.4"]  # tu backend de confianza
+                if request.META.get("REMOTE_ADDR") not in frontend_ips:
+                    Atacante.objects.create(
+                        ip=request.META.get("REMOTE_ADDR"),
+                        tipos="Usuario no encontrado",
+                        payload=json.dumps(request.data),
+                        user_agent=request.META.get("HTTP_USER_AGENT", ""),
+                        bloqueado=True,
+                        fecha=now(),
+                    )
+
                 print("[LoginView] Ataque registrado: usuario no encontrado")
             except Exception as e:
                 import traceback

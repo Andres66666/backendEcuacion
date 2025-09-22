@@ -8,8 +8,19 @@ class AuditoriaMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        # Excepciones de frontend
+        trusted_origins = ["https://mallafinita.netlify.app"]
+        trusted_ips = ["127.0.0.1", "192.168.0.4"]
+
         # Si viene marcado un ataque desde SQLIDefenseMiddleware
         if hasattr(request, "sql_attack_info"):
+            # Ignorar si es frontend confiable o IP de confianza
+            origen = request.META.get("HTTP_ORIGIN", "").lower()
+            ip = request.META.get("REMOTE_ADDR")
+
+            if origen in trusted_origins or ip in trusted_ips:
+                return self.get_response(request)
+
             ataque = request.sql_attack_info
             ip = ataque["ip"]
 
@@ -19,10 +30,8 @@ class AuditoriaMiddleware:
 
                 if atacante_existente:
                     if atacante_existente.bloqueado:
-                        # Si ya estaba bloqueado, no permite nada
                         return JsonResponse({"mensaje": "Acceso bloqueado"}, status=403)
                     else:
-                        # Si existe pero no estaba bloqueado, actualizar información
                         atacante_existente.tipos = ",".join(ataque["tipos"])
                         atacante_existente.descripcion = "; ".join(
                             ataque.get("descripcion", [])
@@ -58,5 +67,4 @@ class AuditoriaMiddleware:
             return JsonResponse({"mensaje": "Ataque detectado"}, status=403)
 
         # Si no hay ataque → continuar normal
-        response = self.get_response(request)
-        return response
+        return self.get_response(request)
