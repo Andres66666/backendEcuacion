@@ -6,7 +6,7 @@ git config --global user.email "cya2024773@est.univalle.edu"
 git init
 git status
 git add .
-git commit -m "Primer commit"
+git commit -m "Fin"
 git remote add origin https://github.com/Andres66666/FrontendEcuacion.git
 git push -u origin main
 
