@@ -3,26 +3,20 @@
 from pathlib import Path
 from datetime import timedelta
 import os
-from decouple import config
 import cloudinary
+from corsheaders.defaults import default_headers
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# =====================================================
+# BASE
+# =====================================================
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-(fn$sd-g@*)51f7)nc!a^3xeb(ma^9f6pm02_a+2h6tw^251fq"
+SECRET_KEY = os.getenv(
+    "DJANGO_SECRET_KEY",
+    "django-insecure-(fn$sd-g@*)51f7)nc!a^3xeb(ma^9f6pm02_a+2h6tw^251fq",
+)
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-
-# ALLOWED_HOSTS = ["backendecuacion.onrender.com", "localhost", "127.0.0.1"]
-# esto es para probar termux
-# "192.168.0.4",  # PROTEGEMOS LA IP DE LA MAQUINA O DEL SERVIDOR
-
-""" ALLOWED_HOSTS = ["192.168.0.4", "localhost", "127.0.0.1"] """
-# o temporalmente:
-# ALLOWED_HOSTS = ["*"]
+DEBUG = os.getenv("DJANGO_DEBUG", "True") == "True"
 
 ALLOWED_HOSTS = [
     "backendecuacion.onrender.com",
@@ -30,7 +24,9 @@ ALLOWED_HOSTS = [
     "127.0.0.1",
 ]
 
-# Application definition
+# =====================================================
+# APPLICATIONS
+# =====================================================
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -44,15 +40,9 @@ INSTALLED_APPS = [
     "users",
 ]
 
-REST_FRAMEWORK = {
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.AllowAny",
-    ],
-    "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
-    ),
-    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-}
+# =====================================================
+# MIDDLEWARE
+# =====================================================
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
@@ -65,7 +55,9 @@ MIDDLEWARE = [
     "GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseMiddleware",
     "users.middleware.AuditoriaMiddleware",
 ]
+
 ROOT_URLCONF = "main.urls"
+
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -83,17 +75,10 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "main.wsgi.application"
-""" DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": "Ecuacion",
-        "USER": "postgres",
-        "PASSWORD": "13247291",
-        "HOST": "localhost",
-        "PORT": "5432",
-    }
-} """
 
+# =====================================================
+# DATABASE
+# =====================================================
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -107,112 +92,72 @@ DATABASES = {
     }
 }
 
-# Password validation
-# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
-
+# =====================================================
+# PASSWORD VALIDATION
+# =====================================================
 AUTH_PASSWORD_VALIDATORS = [
     {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
     },
-    {
-        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
-    },
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-
-# Internationalization
-# https://docs.djangoproject.com/en/5.2/topics/i18n/
-
+# =====================================================
+# INTERNATIONALIZATION
+# =====================================================
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
+
+# =====================================================
+# REST FRAMEWORK
+# =====================================================
+REST_FRAMEWORK = {
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
     "ROTATE_REFRESH_TOKENS": True,
 }
 
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+# =====================================================
+# CORS & CSRF
+# =====================================================
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:4200",
     "http://127.0.0.1:4200",
     "https://mallafinita.netlify.app",
 ]
 
-
-# Permitir cabeceras custom si tu Angular envía Authorization o Content-Type
-from corsheaders.defaults import default_headers
+CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
+CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOW_HEADERS = list(default_headers) + [
     "content-type",
     "authorization",
     "x-requested-with",
 ]
-CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
-CSRF_TRUSTED_ORIGINS = ["https://mallafinita.netlify.app"]
-CORS_ALLOW_CREDENTIALS = True
 
-APPEND_SLASH = True  # O False, según tu preferencia
-
-
-# Configuraciones de seguridad para producción
-if not DEBUG:
-    SECURE_SSL_REDIRECT = True
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SECURE_HSTS_SECONDS = 31536000
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
-    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-
-# Auto primary key
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
-DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
-
-# Archivos estáticos
-STATIC_URL = "/static/"
-STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
-
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
-
-# Archivos multimedia
-MEDIA_URL = "/media/"
-CLOUDINARY_STORAGE = {
-    "CLOUD_NAME": os.getenv("CLOUD_NAME", "dexggkhkd"),
-    "API_KEY": os.getenv("CLOUDINARY_API_KEY", "896862494571978"),
-    "API_SECRET": os.getenv("CLOUDINARY_API_SECRET", "-uWh6mQnL_5dUgI3LIE0rRYxVfI"),
-    "SECURE": True,
-}
-# Configuration
-cloudinary.config(
-    cloud_name="dexggkhkd",
-    api_key="896862494571978",
-    api_secret="-uWh6mQnL_5dUgI3LIE0rRYxVfI",
-    secure=True,
-)
-LANGUAGE_CODE = "en-us"
-TIME_ZONE = "UTC"
-USE_I18N = True
-USE_TZ = True
-
+# =====================================================
+# SQLI DEFENSE MIDDLEWARE
+# =====================================================
 SQLI_DEFENSE_TRUSTED_ORIGINS = [
     "https://mallafinita.netlify.app",
 ]
 
-# Lista de IPs confiables que no serán bloqueadas ni analizadas
 SQLI_DEFENSE_TRUSTED_IPS = [
-    "127.0.0.1",  # localhost
-    "192.168.0.4",  # tu máquina interna, por ejemplo
+    "127.0.0.1",
+    "192.168.0.4",
 ]
-# Excepciones de rutas para el middleware de SQLIDefense
 
 SQLI_DEFENSE_EXEMPT_PATHS = [
     "/api/login/",
@@ -232,5 +177,44 @@ SQLI_DEFENSE_EXEMPT_PATHS = [
     "/api/token/",
 ]
 
-# ejecuta este comando para probar el ataque en termux
-# python manage.py runserver 0.0.0.0:8000
+# =====================================================
+# STATIC & MEDIA
+# =====================================================
+STATIC_URL = "/static/"
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+MEDIA_URL = "/media/"
+DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
+
+CLOUDINARY_STORAGE = {
+    "CLOUD_NAME": os.getenv("CLOUD_NAME", "dexggkhkd"),
+    "API_KEY": os.getenv("CLOUDINARY_API_KEY", "896862494571978"),
+    "API_SECRET": os.getenv("CLOUDINARY_API_SECRET", "-uWh6mQnL_5dUgI3LIE0rRYxVfI"),
+    "SECURE": True,
+}
+
+cloudinary.config(
+    cloud_name=CLOUDINARY_STORAGE["CLOUD_NAME"],
+    api_key=CLOUDINARY_STORAGE["API_KEY"],
+    api_secret=CLOUDINARY_STORAGE["API_SECRET"],
+    secure=True,
+)
+
+# =====================================================
+# SEGURIDAD SSL PRODUCCIÓN
+# =====================================================
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# =====================================================
+# CONFIG ADICIONAL
+# =====================================================
+APPEND_SLASH = True
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
