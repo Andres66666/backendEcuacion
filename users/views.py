@@ -284,12 +284,10 @@ class LoginView(APIView):
             )
 
         except Exception as e:
-            print("Error inesperado en LoginView:", str(e))
+            import traceback
+
             traceback.print_exc()
-            return Response(
-                {"error": "Error interno del servidor"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+            return Response({"error": str(e)}, status=500)
 
 
 class RolViewSet(viewsets.ModelViewSet):
