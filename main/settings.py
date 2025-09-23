@@ -79,7 +79,7 @@ WSGI_APPLICATION = "main.wsgi.application"
 # =====================================================
 # DATABASE
 # =====================================================
-DATABASES = {
+""" DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": os.getenv("DB_NAME", "ecuacion"),
@@ -90,7 +90,24 @@ DATABASES = {
         ),
         "PORT": os.getenv("DB_PORT", "5432"),
     }
+} """
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("DB_NAME", "ecuacion"),
+        "USER": os.getenv("DB_USER", "ecuacion_user"),
+        "PASSWORD": os.getenv("DB_PASSWORD", "aPNuMZDruvJcndzpKOwycaTecZYJMMu0"),
+        "HOST": os.getenv(
+            "DB_HOST", "dpg-d38se1nfte5s73cc7j6g-a.oregon-postgres.render.com"
+        ),
+        "PORT": os.getenv("DB_PORT", "5432"),
+        "OPTIONS": {  # ← Agrega esto
+            "sslmode": "require",  # Obliga SSL; Render lo maneja
+        },
+        # Opcional: Si usas psycopg3, agrega "OPTIONS": {"channel_binding": "disable"} si hay issues con channel binding.
+    }
 }
+
 
 # =====================================================
 # PASSWORD VALIDATION
@@ -208,12 +225,12 @@ cloudinary.config(
 # SEGURIDAD SSL PRODUCCIÓN
 # =====================================================
 if not DEBUG:
-    # SECURE_SSL_REDIRECT = True
-    # SESSION_COOKIE_SECURE = True
-    # CSRF_COOKIE_SECURE = True
-    # SECURE_HSTS_SECONDS = 31536000
-    # SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    # SECURE_HSTS_PRELOAD = True
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # =====================================================
