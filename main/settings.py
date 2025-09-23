@@ -88,17 +88,6 @@ DATABASES = {
     }
 }
 
-""" DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME', 'ecucaion'),
-        'USER': os.getenv('DB_USER', 'ecucaion_user'),
-        'PASSWORD': os.getenv('DB_PASSWORD', '52mXFFSYOxIe5idbW2GOqPVcYkPZT1r8'),
-        'HOST': os.getenv('DB_HOST', 'dpg-d2n0g9qdbo4c73fakr90-a.oregon-postgres.render.com'),
-        'PORT': os.getenv('DB_PORT', '5432'),
-    }
-} """
-
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
