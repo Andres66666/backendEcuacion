@@ -138,7 +138,10 @@ CORS_ALLOWED_ORIGINS = [
     "https://mallafinita.netlify.app",
 ]
 
-CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
+CSRF_TRUSTED_ORIGINS = [
+    "https://mallafinita.netlify.app",
+]
+
 CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOW_HEADERS = list(default_headers) + [
@@ -161,6 +164,7 @@ SQLI_DEFENSE_TRUSTED_IPS = [
 
 SQLI_DEFENSE_EXEMPT_PATHS = [
     "/api/login/",
+    "/api/token/",
     "/api/rol/",
     "/api/permiso/",
     "/api/usuario/",
@@ -174,7 +178,6 @@ SQLI_DEFENSE_EXEMPT_PATHS = [
     "/api/equipo_herramienta/",
     "/api/gastos_generales/",
     "/api/auditoria_db/",
-    "/api/token/",
 ]
 
 # =====================================================
@@ -205,12 +208,12 @@ cloudinary.config(
 # SEGURIDAD SSL PRODUCCIÓN
 # =====================================================
 if not DEBUG:
-    SECURE_SSL_REDIRECT = True
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SECURE_HSTS_SECONDS = 31536000
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
+    # SECURE_SSL_REDIRECT = True
+    # SESSION_COOKIE_SECURE = True
+    # CSRF_COOKIE_SECURE = True
+    # SECURE_HSTS_SECONDS = 31536000
+    # SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    # SECURE_HSTS_PRELOAD = True
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # =====================================================
