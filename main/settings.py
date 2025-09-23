@@ -203,6 +203,9 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
+SQLI_DEFENSE_TRUSTED_ORIGINS = [
+    "https://mallafinita.netlify.app",
+]
 
 # Lista de IPs confiables que no serán bloqueadas ni analizadas
 SQLI_DEFENSE_TRUSTED_IPS = [
