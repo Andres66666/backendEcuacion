@@ -8,43 +8,40 @@ class AuditoriaMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        trusted_origins = ["https://mallafinita.netlify.app"]
-        trusted_ips = ["127.0.0.1", "192.168.0.4"]
-
-        ataque = getattr(request, "sql_attack_info", None)
-        if ataque and "ip" in ataque:
-            origen = request.META.get("HTTP_ORIGIN", "").lower()
-            ip = request.META.get("REMOTE_ADDR")
-
-            if origen in trusted_origins or ip in trusted_ips:
-                return self.get_response(request)
+        # 🔹 Revisar si SQLIDefenseMiddleware marcó un ataque
+        if hasattr(request, "sql_attack_info"):
+            ataque = request.sql_attack_info
+            ip = ataque.get("ip", "desconocida")
 
             try:
-                atacante_existente = Atacante.objects.filter(ip=ataque["ip"]).first()
+                # Buscar registro existente del atacante
+                atacante = Atacante.objects.filter(ip=ip).first()
 
-                tipos = ",".join(ataque.get("tipos", []))
-                descripcion = "; ".join(ataque.get("descripcion", []))
-                payload = ataque.get("payload", "")
-                user_agent = request.META.get("HTTP_USER_AGENT", "")
+                if atacante:
+                    # Si ya estaba bloqueado, retornar 403
+                    if atacante.bloqueado:
+                        return JsonResponse({"mensaje": "Acceso bloqueado"}, status=403)
 
-                if atacante_existente:
-                    atacante_existente.tipos = tipos
-                    atacante_existente.descripcion = descripcion
-                    atacante_existente.payload = payload
-                    atacante_existente.user_agent = user_agent
-                    atacante_existente.bloqueado = True
-                    atacante_existente.fecha = now()
-                    atacante_existente.save()
+                    # Actualizar información del ataque
+                    atacante.tipos = ",".join(ataque.get("tipos", []))
+                    atacante.descripcion = "; ".join(ataque.get("descripcion", []))
+                    atacante.payload = ataque.get("payload", "")
+                    atacante.user_agent = request.META.get("HTTP_USER_AGENT", "")
+                    atacante.bloqueado = True
+                    atacante.fecha = now()
+                    atacante.save()
                     print(
                         f"[AuditoriaMiddleware] Ataque actualizado y bloqueado para IP {ip}"
                     )
+
                 else:
+                    # Crear un nuevo registro para la IP atacante
                     Atacante.objects.create(
-                        ip=ataque["ip"],
-                        tipos=tipos,
-                        descripcion=descripcion,
-                        payload=payload,
-                        user_agent=user_agent,
+                        ip=ip,
+                        tipos=",".join(ataque.get("tipos", [])),
+                        descripcion="; ".join(ataque.get("descripcion", [])),
+                        payload=ataque.get("payload", ""),
+                        user_agent=request.META.get("HTTP_USER_AGENT", ""),
                         bloqueado=True,
                         fecha=now(),
                     )
@@ -55,6 +52,8 @@ class AuditoriaMiddleware:
             except Exception as e:
                 print(f"[AuditoriaMiddleware] Error guardando ataque: {e}")
 
+            # 🔹 Retornar 403 siempre que se detecte un ataque
             return JsonResponse({"mensaje": "Ataque detectado"}, status=403)
 
+        # 🔹 Si no hay ataque, continuar normalmente
         return self.get_response(request)

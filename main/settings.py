@@ -26,7 +26,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = [
     "backendecuacion.onrender.com",
-    "192.168.0.4",
     "localhost",
     "127.0.0.1",
 ]
@@ -156,10 +155,10 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
     "authorization",
     "x-requested-with",
 ]
-
+CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
 CSRF_TRUSTED_ORIGINS = ["https://mallafinita.netlify.app"]
 CORS_ALLOW_CREDENTIALS = True
-CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
+
 APPEND_SLASH = True  # O False, según tu preferencia
 
 
