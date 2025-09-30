@@ -966,6 +966,7 @@ class MaterialesViewSet(viewsets.ModelViewSet):
         if id_gasto:
             queryset = queryset.filter(id_gasto_operacion=id_gasto)
         return queryset
+
     @action(detail=False, methods=["get"])
     def unidades(self, request):
         # 🔹 Trae unidades únicas (distinct)
