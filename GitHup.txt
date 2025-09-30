@@ -26,3 +26,15 @@ git push -u origin main
 git pull origin main
 git fetch --all
 git reset --hard origin/main
+
+
+""" DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "Ecuacion",
+        "USER": "postgres",
+        "PASSWORD": "13247291",
+        "HOST": "localhost",
+        "PORT": "5432",
+    }
+} """

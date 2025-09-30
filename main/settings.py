@@ -81,16 +81,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "main.wsgi.application"
-""" DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": "Ecuacion",
-        "USER": "postgres",
-        "PASSWORD": "13247291",
-        "HOST": "localhost",
-        "PORT": "5432",
-    }
-} """
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -138,11 +129,14 @@ SIMPLE_JWT = {
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:4200",
-    "http://127.0.0.1:4200",
     "https://mallafinita.netlify.app",
+    "http://mallafinita.netlify.app",  # 👈 agrega versión http
 ]
-CSRF_TRUSTED_ORIGINS = ["https://mallafinita.netlify.app"]
+CSRF_TRUSTED_ORIGINS = [
+    "https://mallafinita.netlify.app",
+    "http://mallafinita.netlify.app",
+]
+
 CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
 APPEND_SLASH = True  # O False, según tu preferencia
@@ -202,8 +196,6 @@ SQLI_DEFENSE_TRUSTED_IPS = [
 # Lista de dominios frontend permitidos
 SQLI_DEFENSE_TRUSTED_DOMAINS = [
     "mallafinita.netlify.app",
-    "localhost:4200",  # cuando trabajas local
-    "127.0.0.1:4200",
 ]
 # ejecuta este comando para probar el ataque en termux
 # python manage.py runserver 0.0.0.0:8000
