@@ -81,7 +81,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "main.wsgi.application"
-DATABASES = {
+""" DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": "Ecuacion",
@@ -89,6 +89,18 @@ DATABASES = {
         "PASSWORD": "13247291",
         "HOST": "localhost",
         "PORT": "5432",
+    }
+} """
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("DB_NAME", "ecuacion"),
+        "USER": os.getenv("DB_USER", "ecuacion_user"),
+        "PASSWORD": os.getenv("DB_PASSWORD", "aPNuMZDruvJcndzpKOwycaTecZYJMMu0"),
+        "HOST": os.getenv(
+            "DB_HOST", "dpg-d38se1nfte5s73cc7j6g-a.oregon-postgres.render.com"
+        ),
+        "PORT": os.getenv("DB_PORT", "5432"),
     }
 }
 
