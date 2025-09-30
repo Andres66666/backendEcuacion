@@ -26,9 +26,6 @@ ALLOWED_HOSTS = [
     "127.0.0.1",
     "192.168.0.7",
     "172.16.10.11",
-
- 
-
     # coloca la red asiganda para pruebas univalle
 ]
 # Application definition
@@ -190,6 +187,11 @@ SQLI_DEFENSE_TRUSTED_IPS = [
     "172.16.10.11",
     # coloca la red asiganda para pruebas univalle
 ]
-
+# Lista de dominios frontend permitidos
+SQLI_DEFENSE_TRUSTED_DOMAINS = [
+    "mallafinita.netlify.app",
+    "localhost:4200",  # cuando trabajas local
+    "127.0.0.1:4200",
+]
 # ejecuta este comando para probar el ataque en termux
 # python manage.py runserver 0.0.0.0:8000
