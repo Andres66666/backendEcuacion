@@ -13,19 +13,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = "django-insecure-(fn$sd-g@*)51f7)nc!a^3xeb(ma^9f6pm02_a+2h6tw^251fq"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 # protegemos las rutas del servidor
 
 ALLOWED_HOSTS = [
     "backendecuacion.onrender.com",
-    "172.16.8.103",
-    "172.16.8.1",
-    "192.168.0.4",
-    "localhost",
-    "127.0.0.1",
-    "192.168.0.7",
-    "172.16.10.11",
     # coloca la red asiganda para pruebas univalle
 ]
 # Application definition
