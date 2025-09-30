@@ -1,27 +1,30 @@
-"""Django settings for main project."""
+"""
+Django settings for main project.  (Versión segura y lista para Render)
+Use variables de entorno para credenciales sensibles.
+"""
 
 from pathlib import Path
 from datetime import timedelta
 import os
-from decouple import config
+import json
 import cloudinary
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# Build paths
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-(fn$sd-g@*)51f7)nc!a^3xeb(ma^9f6pm02_a+2h6tw^251fq"
+# === Seguridad / Entorno ===
+# En producción: define SECRET_KEY en las Environment Variables de Render
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "cambia-esto-en-local-usa-env")
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+# DEBUG debe ser False en producción
+DEBUG = os.getenv("DEBUG", "0") in ("1", "true", "True")
 
-# protegemos las rutas del servidor
+# Hosts permitidos (añade aquí dominios custom)
+ALLOWED_HOSTS = os.getenv(
+    "ALLOWED_HOSTS", "backendecuacion.onrender.com,localhost,127.0.0.1"
+).split(",")
 
-ALLOWED_HOSTS = [
-    "backendecuacion.onrender.com",
-    # coloca la red asiganda para pruebas univalle
-]
-# Application definition
+# === Aplicaciones instaladas ===
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -29,12 +32,13 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "corsheaders",
+    "corsheaders",  # debe ir arriba en MIDDLEWARE
     "rest_framework",
     "rest_framework_simplejwt",
     "users",
 ]
 
+# === REST Framework / Simple JWT ===
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.AllowAny",
@@ -44,8 +48,18 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(
+        minutes=int(os.getenv("JWT_ACCESS_MINUTES", 60))
+    ),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=int(os.getenv("JWT_REFRESH_DAYS", 1))),
+    "ROTATE_REFRESH_TOKENS": True,
+}
+
+# === Middleware ===
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",
+    "corsheaders.middleware.CorsMiddleware",  # debe ser la primera relacionada a CORS
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -53,8 +67,13 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # Middlewares personalizados (descomentar si están probados)
+    # "GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseMiddleware",
+    # "users.middleware.AuditoriaMiddleware",
 ]
+
 ROOT_URLCONF = "main.urls"
+
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -73,12 +92,13 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "main.wsgi.application"
 
+# === Base de datos (usar variables de entorno en Render) ===
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": os.getenv("DB_NAME", "ecuacion"),
         "USER": os.getenv("DB_USER", "ecuacion_user"),
-        "PASSWORD": os.getenv("DB_PASSWORD", "aPNuMZDruvJcndzpKOwycaTecZYJMMu0"),
+        "PASSWORD": os.getenv("DB_PASSWORD", ""),
         "HOST": os.getenv(
             "DB_HOST", "dpg-d38se1nfte5s73cc7j6g-a.oregon-postgres.render.com"
         ),
@@ -86,9 +106,7 @@ DATABASES = {
     }
 }
 
-# Password validation
-# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
-
+# === Password validators ===
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
@@ -104,89 +122,102 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
-# Internationalization
-# https://docs.djangoproject.com/en/5.2/topics/i18n/
-
+# === Internacionalización ===
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
-SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
-    "ROTATE_REFRESH_TOKENS": True,
-}
 
+# === Archivos estáticos y multimedia ===
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-CORS_ALLOWED_ORIGINS = [
-    "https://mallafinita.netlify.app",
-    "http://mallafinita.netlify.app",  # 👈 agrega versión http
-]
-CSRF_TRUSTED_ORIGINS = [
-    "https://mallafinita.netlify.app",
-    "http://mallafinita.netlify.app",
-]
+
+STATIC_URL = "/static/"
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+STATICFILES_STORAGE = os.getenv(
+    "STATICFILES_STORAGE", "whitenoise.storage.CompressedManifestStaticFilesStorage"
+)
+
+MEDIA_URL = "/media/"
+
+# Cloudinary: leer credenciales desde ENV
+CLOUDINARY_STORAGE = {
+    "CLOUD_NAME": os.getenv("CLOUD_NAME", ""),
+    "API_KEY": os.getenv("CLOUDINARY_API_KEY", ""),
+    "API_SECRET": os.getenv("CLOUDINARY_API_SECRET", ""),
+    "SECURE": True,
+}
+DEFAULT_FILE_STORAGE = os.getenv(
+    "DEFAULT_FILE_STORAGE", "cloudinary_storage.storage.MediaCloudinaryStorage"
+)
+
+# Inicializar cloudinary (seguro)
+if CLOUDINARY_STORAGE["API_KEY"] and CLOUDINARY_STORAGE["API_SECRET"]:
+    cloudinary.config(
+        cloud_name=CLOUDINARY_STORAGE["CLOUD_NAME"],
+        api_key=CLOUDINARY_STORAGE["API_KEY"],
+        api_secret=CLOUDINARY_STORAGE["API_SECRET"],
+        secure=True,
+    )
+
+# === CORS / CSRF ===
+# Define los orígenes frontend permitidos (Netlify y dev). En Render configura estas ENV si cambian.
+CORS_ALLOWED_ORIGINS = json.loads(
+    os.getenv("CORS_ALLOWED_ORIGINS_JSON", '["https://mallafinita.netlify.app"]')
+)
+CSRF_TRUSTED_ORIGINS = json.loads(
+    os.getenv("CSRF_TRUSTED_ORIGINS_JSON", '["https://mallafinita.netlify.app"]')
+)
 
 CORS_ALLOW_CREDENTIALS = True
-CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
-APPEND_SLASH = True  # O False, según tu preferencia
+APPEND_SLASH = True
 
-
-# Configuraciones de seguridad para producción
+# === Seguridad (activar en producción) ===
 if not DEBUG:
-    SECURE_SSL_REDIRECT = True
+    SECURE_SSL_REDIRECT = os.getenv("SECURE_SSL_REDIRECT", "1") in ("1", "true", "True")
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", 31536000))
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
-# Auto primary key
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
-DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
-
-# Archivos estáticos
-STATIC_URL = "/static/"
-STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
-
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
-
-# Archivos multimedia
-MEDIA_URL = "/media/"
-CLOUDINARY_STORAGE = {
-    "CLOUD_NAME": os.getenv("CLOUD_NAME", "dexggkhkd"),
-    "API_KEY": os.getenv("CLOUDINARY_API_KEY", "896862494571978"),
-    "API_SECRET": os.getenv("CLOUDINARY_API_SECRET", "-uWh6mQnL_5dUgI3LIE0rRYxVfI"),
-    "SECURE": True,
-}
-# Configuration
-cloudinary.config(
-    cloud_name="dexggkhkd",
-    api_key="896862494571978",
-    api_secret="-uWh6mQnL_5dUgI3LIE0rRYxVfI",
-    secure=True,
+# === Trusted IPs / dominios para tu detector SQL (opcional) ===
+SQLI_DEFENSE_TRUSTED_IPS = os.getenv("SQLI_DEFENSE_TRUSTED_IPS", "127.0.0.1").split(",")
+SQLI_DEFENSE_TRUSTED_DOMAINS = json.loads(
+    os.getenv("SQLI_DEFENSE_TRUSTED_DOMAINS_JSON", '["mallafinita.netlify.app"]')
 )
-LANGUAGE_CODE = "en-us"
-TIME_ZONE = "UTC"
-USE_I18N = True
-USE_TZ = True
 
+# === Logging (útil en Render para ver tracebacks) ===
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {"class": "logging.StreamHandler"},
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "DEBUG" if DEBUG else "INFO",
+    },
+    "loggers": {
+        "django.request": {
+            "handlers": ["console"],
+            "level": "DEBUG" if DEBUG else "INFO",
+            "propagate": True,
+        },
+    },
+}
 
-# Lista de IPs confiables que no serán bloqueadas ni analizadas
-SQLI_DEFENSE_TRUSTED_IPS = [
-    "127.0.0.1",  # localhost
-    "192.168.0.4",  # tu máquina interna, por ejemplo
-    "192.168.0.7",
-    "172.16.8.103",
-    "172.16.10.11",
-    # coloca la red asiganda para pruebas univalle
-]
-# Lista de dominios frontend permitidos
-SQLI_DEFENSE_TRUSTED_DOMAINS = [
-    "mallafinita.netlify.app",
-]
-# ejecuta este comando para probar el ataque en termux
-# python manage.py runserver 0.0.0.0:8000
+# === Opcionales / recomendaciones adicionales ===
+# - Asegúrate de definir en Render las ENV: DJANGO_SECRET_KEY, DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT,
+#   CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET,
+#   CORS_ALLOWED_ORIGINS_JSON, CSRF_TRUSTED_ORIGINS_JSON, SQLI_DEFENSE_TRUSTED_DOMAINS_JSON
+#
+# - Para CORS JSON example: '["https://mallafinita.netlify.app","http://localhost:4200"]'
+#
+# - No dejes DEBUG=True en producción (pásalo a '0' en la ENV)
+#
+# - Si usas middlewares personalizados, coméntalos mientras depuras y activa cuando estén testeados.
+#
+# - Para desplegar: borra migraciones locales mal formadas, ejecuta migrate en Render (o en deploy hooks).
+#
+# - Revisa que SIMPLE_JWT y la implementación de tu modelo Usuario sean compatibles (i.e., is_active, get_username, etc.)
