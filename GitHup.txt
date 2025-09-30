@@ -20,3 +20,9 @@ git add .
 git commit -m "Primer commit"
 git remote add origin https://github.com/Andres66666/backendEcuacion.git
 git push -u origin main
+
+
+
+git pull origin main
+git fetch --all
+git reset --hard origin/main

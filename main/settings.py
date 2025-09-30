@@ -19,9 +19,16 @@ DEBUG = True
 
 ALLOWED_HOSTS = [
     "backendecuacion.onrender.com",
+    "172.16.8.103",
+    "172.16.8.1",
     "192.168.0.4",
     "localhost",
     "127.0.0.1",
+    "192.168.0.7",
+    "172.16.10.11",
+
+ 
+
     # coloca la red asiganda para pruebas univalle
 ]
 # Application definition
@@ -178,6 +185,9 @@ USE_TZ = True
 SQLI_DEFENSE_TRUSTED_IPS = [
     "127.0.0.1",  # localhost
     "192.168.0.4",  # tu máquina interna, por ejemplo
+    "192.168.0.7",
+    "172.16.8.103",
+    "172.16.10.11",
     # coloca la red asiganda para pruebas univalle
 ]
 
