@@ -69,21 +69,24 @@ WSGI_APPLICATION = "main.wsgi.application"
 # =====================================================
 # Database
 # =====================================================
+import os
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("DB_NAME", "ecuacion"),
-        "USER": os.getenv("DB_USER", "ecuacion_user"),
-        "PASSWORD": os.getenv("DB_PASSWORD", "aPNuMZDruvJcndzpKOwycaTecZYJMMu0"),
-        "HOST": os.getenv(
+        "NAME": os.environ.get("DB_NAME", "ecuacion"),
+        "USER": os.environ.get("DB_USER", "ecuacion_user"),
+        "PASSWORD": os.environ.get("DB_PASSWORD", "aPNuMZDruvJcndzpKOwycaTecZYJMMu0"),
+        "HOST": os.environ.get(
             "DB_HOST", "dpg-d38se1nfte5s73cc7j6g-a.oregon-postgres.render.com"
         ),
-        "PORT": os.getenv("DB_PORT", "5432"),
+        "PORT": os.environ.get("DB_PORT", "5432"),
         "OPTIONS": {
-            "sslmode": "require",  # obligatorio para conexión externa segura
+            "sslmode": "require",  # Esto es obligatorio para Render
         },
     }
 }
+
 
 # =====================================================
 # Password validation
