@@ -49,13 +49,13 @@ from rest_framework.decorators import action
 from decimal import Decimal, InvalidOperation
 from datetime import timedelta
 from django.utils.timezone import now
-
 from django.contrib.auth.hashers import make_password, check_password
 
 from rest_framework.permissions import IsAdminUser
 from rest_framework.permissions import AllowAny
 
 import json
+
 
 # =====================================================
 # === =============  seccion 1   === ==================
@@ -67,39 +67,19 @@ class AtacanteViewSet(viewsets.ModelViewSet):
     serializer_class = AtacanteSerializer
 
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from django.utils import timezone
-from datetime import timedelta
-from django.contrib.auth.hashers import check_password
-from rest_framework_simplejwt.tokens import RefreshToken
-import json
-from django.db.models import Prefetch
-from .models import Usuario, UsuarioRol, RolPermiso, Atacante
-from .serializers import LoginSerializer
-from django.utils.timezone import now
-
-
 class LoginView(APIView):
     authentication_classes = []
     permission_classes = []
 
     def post(self, request):
+        serializer = LoginSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        correo = serializer.validated_data.get("correo")
+        password = serializer.validated_data.get("password")
+
         try:
-            # -----------------------------
-            # Validar serializer
-            # -----------------------------
-            serializer = LoginSerializer(data=request.data)
-            if not serializer.is_valid():
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-            correo = serializer.validated_data.get("correo")
-            password = serializer.validated_data.get("password")
-
-            # -----------------------------
-            # Buscar usuario
-            # -----------------------------
             usuario = Usuario.objects.prefetch_related(
                 Prefetch(
                     "usuariorol_set", queryset=UsuarioRol.objects.select_related("rol")
@@ -114,9 +94,6 @@ class LoginView(APIView):
                 ur.rol.nombre for ur in usuario.usuariorol_set.all()
             ]
 
-            # -----------------------------
-            # Usuario desactivado
-            # -----------------------------
             if not usuario.estado:
                 return Response(
                     {
@@ -126,11 +103,11 @@ class LoginView(APIView):
                     status=status.HTTP_403_FORBIDDEN,
                 )
 
-            # -----------------------------
-            # Intentos fallidos
-            # -----------------------------
+            # ==============================
+            # INTENTOS FALLIDOS (EXENTO PARA ADMIN)
+            # ==============================
             if not check_password(password, usuario.password):
-                if not es_admin:
+                if not es_admin:  # ← NUEVO: Solo aplica a no-admins
                     if usuario.intentos_fallidos >= 3:
                         if (
                             usuario.ultimo_intento
@@ -148,12 +125,13 @@ class LoginView(APIView):
                     usuario.intentos_fallidos += 1
                     usuario.ultimo_intento = timezone.now()
 
+                    # Mensajes según intento (solo para no-admins)
                     if usuario.intentos_fallidos == 1:
                         mensaje_error = "Credenciales incorrectas. Intento 1 de 3."
                     elif usuario.intentos_fallidos == 2:
                         mensaje_error = "Credenciales incorrectas. Intento 2 de 3. Contacte con el administrador si olvidó su contraseña."
-                    else:
-                        usuario.estado = False
+                    elif usuario.intentos_fallidos >= 3:
+                        usuario.estado = False  # Inactiva solo si no es admin
                         mensaje_error = "Credenciales incorrectas. Intentos superados. Cuenta inhabilitada, comuníquese con el administrador."
 
                     usuario.save()
@@ -162,6 +140,7 @@ class LoginView(APIView):
                         status=status.HTTP_400_BAD_REQUEST,
                     )
                 else:
+                    # Para admin: Solo mensaje suave, sin incrementar contadores
                     return Response(
                         {
                             "error": "Credenciales incorrectas. Como administrador, revise sus datos sin penalizaciones.",
@@ -170,9 +149,9 @@ class LoginView(APIView):
                         status=status.HTTP_400_BAD_REQUEST,
                     )
 
-            # -----------------------------
-            # Login exitoso
-            # -----------------------------
+            # ==============================
+            # LOGIN EXITOSO: Reset contadores (siempre)
+            # ==============================
             usuario.intentos_fallidos = 0
             usuario.logins_exitosos += 1
             usuario.ultimo_intento = timezone.now()
@@ -195,31 +174,35 @@ class LoginView(APIView):
             refresh = RefreshToken.for_user(usuario)
             access_token = str(refresh.access_token)
 
-            # -----------------------------
-            # Mensajes de login
-            # -----------------------------
+            # ... (resto del código igual hasta la sección de MENSAJES DE INICIO DE SESIÓN)
+
+            # ==============================
+            # MENSAJES DE INICIO DE SESIÓN
+            # ==============================
             mensaje_principal = "¡Inicio de sesión exitoso!"
             mensaje_adicional = ""
             tipo_mensaje = "exito"
             dias_transcurridos = 0
             requiere_cambio_password = False
-            mensaje_urgente = False
-
-            if not es_admin:
-                if not usuario.fecha_cambio_password:
+            mensaje_urgente = (
+                False  # ← NUEVO: Flag para mensajes que requieren lectura manual
+            )
+            if not es_admin:  # ← Solo aplica reglas a no-admins
+                # Control de primer login / cambio obligatorio
+                if not usuario.fecha_cambio_password:  # Nunca cambió contraseña
                     if usuario.logins_exitosos == 1:
                         mensaje_adicional = (
                             "Cambie su contraseña, este es su primer inicio de sesión."
                         )
                         requiere_cambio_password = True
-                        mensaje_urgente = True
-                        tipo_mensaje = "advertencia_urgente"
+                        mensaje_urgente = True  # ← NUEVO: Requiere cierre manual
+                        tipo_mensaje = "advertencia_urgente"  # ← NUEVO: Tipo especial
                     elif usuario.logins_exitosos == 2:
-                        mensaje_adicional = "Debe cambiar su contraseña obligatoriamente, este es su segundo inicio de sesión. Después de este inicio de sesión será bloqueada la cuenta si no cambia la contraseña."
+                        mensaje_adicional = "Debe cambiar su contraseña obligatoriamente, este es su segundo inicio de sesión. despues de este inicio de sesion sera bloqueada la cuenta si no cambia la contraseña"
                         requiere_cambio_password = True
-                        mensaje_urgente = True
-                        tipo_mensaje = "advertencia_urgente"
-                    else:
+                        mensaje_urgente = True  # ← NUEVO: Requiere cierre manual
+                        tipo_mensaje = "advertencia_urgente"  # ← NUEVO: Tipo especial
+                    elif usuario.logins_exitosos >= 3:
                         usuario.estado = False
                         usuario.save()
                         return Response(
@@ -230,14 +213,15 @@ class LoginView(APIView):
                             status=status.HTTP_403_FORBIDDEN,
                         )
 
-                dias_transcurridos = (
-                    timezone.now().date()
-                    - (
-                        usuario.fecha_cambio_password.date()
-                        if usuario.fecha_cambio_password
-                        else usuario.fecha_creacion.date()
-                    )
-                ).days
+                # Control de caducidad (solo para no-admins)
+                if usuario.fecha_cambio_password:
+                    dias_transcurridos = (
+                        timezone.now().date() - usuario.fecha_cambio_password.date()
+                    ).days
+                else:
+                    dias_transcurridos = (
+                        timezone.now().date() - usuario.fecha_creacion.date()
+                    ).days
 
                 if dias_transcurridos >= 90:
                     usuario.estado = False
@@ -261,6 +245,7 @@ class LoginView(APIView):
                     )
                     tipo_mensaje = "advertencia"
             else:
+                # Para admin: Mensaje simple
                 mensaje_adicional = "Bienvenido, administrador. Acceso completo."
 
             return Response(
@@ -270,42 +255,35 @@ class LoginView(APIView):
                     "permisos": permisos,
                     "nombre_usuario": usuario.nombre,
                     "apellido": usuario.apellido,
-                    "imagen_url": usuario.imagen_url or "",
+                    "imagen_url": usuario.imagen_url,
                     "usuario_id": usuario.id,
                     "mensaje": mensaje_principal,
                     "mensaje_adicional": mensaje_adicional,
                     "tipo_mensaje": tipo_mensaje,
                     "dias_transcurridos": dias_transcurridos,
                     "requiere_cambio_password": requiere_cambio_password,
-                    "mensaje_urgente": mensaje_urgente,
+                    "mensaje_urgente": mensaje_urgente,  # ← NUEVO: Para manejo en frontend
                 },
                 status=status.HTTP_200_OK,
             )
 
         except Usuario.DoesNotExist:
-            # Registrar intento de ataque
+            # Registrar intento de ataque o usuario no existente
             try:
                 Atacante.objects.create(
                     ip=request.META.get("REMOTE_ADDR"),
                     tipos="Usuario no encontrado",
-                    payload=json.dumps(request.data, default=str),
+                    payload=json.dumps(request.data),
                     user_agent=request.META.get("HTTP_USER_AGENT", ""),
                     bloqueado=True,
                     fecha=now(),
                 )
+                print("[LoginView] Ataque registrado: usuario no encontrado")
             except Exception as e:
-                print("[LoginView] Error guardando ataque:", e)
+                print("Error guardando ataque:", e)
 
             return Response(
                 {"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND
-            )
-
-        except Exception as e:
-            import traceback
-
-            print("[LoginView] Error inesperado:", traceback.format_exc())
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 
@@ -988,7 +966,6 @@ class MaterialesViewSet(viewsets.ModelViewSet):
         if id_gasto:
             queryset = queryset.filter(id_gasto_operacion=id_gasto)
         return queryset
-
     @action(detail=False, methods=["get"])
     def unidades(self, request):
         # 🔹 Trae unidades únicas (distinct)
