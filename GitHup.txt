@@ -23,6 +23,14 @@ git push -u origin main
 
 
 
+git init
+git status
+git add .
+git commit -m "Primer commit DB"
+git remote add origin https://github.com/Andres66666/GuardianUnivalle-Benito-Yucra.git
+git push -u origin main
+
+
 git pull origin main
 git fetch --all
 git reset --hard origin/main
