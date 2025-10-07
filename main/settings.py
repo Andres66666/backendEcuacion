@@ -36,6 +36,11 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "users",
+    # 2FA / OTP
+    "django_otp",
+    "django_otp.plugins.otp_static",  # códigos de respaldo
+    "django_otp.plugins.otp_totp",  # TOTP (Authenticator)
+    "two_factor",
 ]
 
 REST_FRAMEWORK = {
@@ -54,12 +59,24 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django_otp.middleware.OTPMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseMiddleware",
     "GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseMiddleware",
     "users.middleware.AuditoriaMiddleware",
 ]
+LOGIN_URL = "two_factor:login"
+LOGIN_REDIRECT_URL = "two_factor:profile"
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = "benitoandrescalle035@gmail.com"
+EMAIL_HOST_PASSWORD = "hmczrcgooenggoms"  # sin espacios
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+
 ROOT_URLCONF = "main.urls"
 TEMPLATES = [
     {

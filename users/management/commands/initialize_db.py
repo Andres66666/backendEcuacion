@@ -98,7 +98,7 @@ class Command(BaseCommand):
                 "apellido": "Pérez",
                 "fecha_nacimiento": date(1990, 5, 15),
                 "telefono": "78945612",
-                "correo": "juanperez@example.com",
+                "correo": "CarlaMamani0000087985@gmail.com",
                 "password": "Colaborador123*",
                 "rol": colaborador_role,
                 "imagen_url": "https://res.cloudinary.com/dlrpns8z7/image/upload/v1743595809/sample-image.jpg",

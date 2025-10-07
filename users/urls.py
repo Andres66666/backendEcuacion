@@ -1,6 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
+from two_factor.urls import urlpatterns as two_factor_urlpatterns
 
 router = DefaultRouter()
 # =====================================================
@@ -31,7 +32,24 @@ router.register(r"auditoria_db", views.AtacanteViewSet)
 # =====================================================
 # === =============  seccion 4   === ==================
 # =====================================================
+
 urlpatterns = [
     path("", include(router.urls)),
     path("login/", views.LoginView.as_view(), name="login"),
+    path("verificar-2fa/", views.Verificar2FAView.as_view(), name="verificar-2fa"),
+    path(
+        "enviar-codigo/", views.EnviarCodigoCorreoView.as_view(), name="enviar-codigo"
+    ),
+    path("generar-qr/", views.GenerarQRView.as_view(), name="generar-qr"),
+    path("reset-password/", views.ResetPasswordView.as_view(), name="reset-password"),
+    path(
+        "verificar-temp/",
+        views.VerificarTempPasswordView.as_view(),
+        name="verificar-temp",
+    ),  # ← NUEVO
+    path(
+        "cambiar-password-temp/",
+        views.CambiarPasswordTempView.as_view(),
+        name="cambiar-password-temp",
+    ),  # ← NUEVO
 ]

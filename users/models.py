@@ -1,4 +1,5 @@
 # Create your models here.
+import os
 from django.utils import timezone
 
 from decimal import Decimal
@@ -6,6 +7,15 @@ import uuid
 from django.db import models
 from django.contrib.auth.hashers import make_password
 from decimal import Decimal, InvalidOperation
+from django_otp.util import random_hex
+from django_otp.oath import TOTP
+import base64
+import qrcode
+from io import BytesIO
+import pyotp
+from datetime import timedelta
+from django.utils.crypto import get_random_string
+import uuid
 
 
 # =====================================================
@@ -54,6 +64,42 @@ class Usuario(models.Model):
     def __str__(self):
         return f"{self.nombre} {self.apellido}"
 
+    # ... hasta aqui funciona el codigo correo  ...
+    # ← NUEVO: Campos para 2FA (agrega si no existen)
+    tipo_2fa = models.CharField(
+        max_length=20,
+        choices=[("correo", "Correo"), ("totp", "Google Authenticator")],
+        default="correo",
+    )
+    secret_2fa = models.CharField(max_length=32, blank=True, null=True)
+
+    # ← NUEVO: Métodos para TOTP
+    def generar_secret_2fa(self):
+        """Genera un nuevo secreto TOTP para Google Authenticator"""
+        if not self.secret_2fa:
+            self.secret_2fa = pyotp.random_base32()
+            self.save()
+
+    def generar_qr_authenticator(self):
+        """Devuelve la imagen QR en base64 para escanear con Google Authenticator"""
+        if not self.secret_2fa:
+            self.generar_secret_2fa()
+        totp_uri = pyotp.TOTP(self.secret_2fa).provisioning_uri(
+            name=self.correo, issuer_name="EcuacionPotosi"
+        )
+        img = qrcode.make(totp_uri)
+        buffer = BytesIO()
+        img.save(buffer, format="PNG")
+        qr_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
+        return qr_base64
+
+    def verificar_codigo_totp(self, codigo):
+        """Verifica un código del Authenticator"""
+        if not self.secret_2fa:
+            return False
+        totp = pyotp.TOTP(self.secret_2fa)
+        return totp.verify(codigo)
+
 
 class UsuarioRol(models.Model):
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
@@ -69,6 +115,37 @@ class RolPermiso(models.Model):
 
     class Meta:
         unique_together = ("rol", "permiso")
+
+
+class Codigo2FA(models.Model):
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
+    codigo = models.CharField(max_length=6)
+    creado_en = models.DateTimeField(auto_now_add=True)
+    expirado = models.BooleanField(default=False)
+
+    def es_valido(self):
+        return (
+            not self.expirado and (timezone.now() - self.creado_en).seconds < 300
+        )  # 5 min
+
+
+class TempPasswordReset(models.Model):
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
+    token = models.UUIDField(default=uuid.uuid4, unique=True)
+    temp_password = models.CharField(
+        max_length=128
+    )  # Encriptada o plana (para verificación simple)
+    creado_en = models.DateTimeField(auto_now_add=True)
+    usado = models.BooleanField(default=False)
+    expirado = models.BooleanField(default=False)
+
+    def es_valido(self):
+        if self.expirado or self.usado:
+            return False
+        return (timezone.now() - self.creado_en) < timedelta(minutes=15)
+
+    def __str__(self):
+        return f"Token {self.token} para {self.usuario.correo}"
 
 
 # =====================================================

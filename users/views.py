@@ -4,6 +4,7 @@ import cloudinary
 from django.shortcuts import render
 from .models import (
     Atacante,
+    Codigo2FA,
     EquipoHerramienta,
     GastoOperacion,
     GastosGenerales,
@@ -14,6 +15,7 @@ from .models import (
     Permiso,
     Rol,
     RolPermiso,
+    TempPasswordReset,
     Usuario,
     UsuarioRol,
 )
@@ -55,11 +57,22 @@ from rest_framework.permissions import IsAdminUser
 from rest_framework.permissions import AllowAny
 
 import json
-
+from django.db.models import Max
+from django.utils.crypto import get_random_string
+from django.conf import settings
+from django.core.mail import send_mail
+import pyotp, qrcode
+import io
+import base64
+from django.utils.crypto import get_random_string
+import uuid
+from datetime import timedelta
 
 # =====================================================
 # === =============  seccion 1   === ==================
 # =====================================================
+
+""" hasta aqui funciona el codigo correo  """
 
 
 class AtacanteViewSet(viewsets.ModelViewSet):
@@ -107,7 +120,7 @@ class LoginView(APIView):
             # INTENTOS FALLIDOS (EXENTO PARA ADMIN)
             # ==============================
             if not check_password(password, usuario.password):
-                if not es_admin:  # ← NUEVO: Solo aplica a no-admins
+                if not es_admin:
                     if usuario.intentos_fallidos >= 3:
                         if (
                             usuario.ultimo_intento
@@ -125,13 +138,12 @@ class LoginView(APIView):
                     usuario.intentos_fallidos += 1
                     usuario.ultimo_intento = timezone.now()
 
-                    # Mensajes según intento (solo para no-admins)
                     if usuario.intentos_fallidos == 1:
                         mensaje_error = "Credenciales incorrectas. Intento 1 de 3."
                     elif usuario.intentos_fallidos == 2:
                         mensaje_error = "Credenciales incorrectas. Intento 2 de 3. Contacte con el administrador si olvidó su contraseña."
                     elif usuario.intentos_fallidos >= 3:
-                        usuario.estado = False  # Inactiva solo si no es admin
+                        usuario.estado = False
                         mensaje_error = "Credenciales incorrectas. Intentos superados. Cuenta inhabilitada, comuníquese con el administrador."
 
                     usuario.save()
@@ -140,7 +152,6 @@ class LoginView(APIView):
                         status=status.HTTP_400_BAD_REQUEST,
                     )
                 else:
-                    # Para admin: Solo mensaje suave, sin incrementar contadores
                     return Response(
                         {
                             "error": "Credenciales incorrectas. Como administrador, revise sus datos sin penalizaciones.",
@@ -171,49 +182,42 @@ class LoginView(APIView):
                     status=status.HTTP_403_FORBIDDEN,
                 )
 
-            refresh = RefreshToken.for_user(usuario)
-            access_token = str(refresh.access_token)
-
-            # ... (resto del código igual hasta la sección de MENSAJES DE INICIO DE SESIÓN)
-
             # ==============================
-            # MENSAJES DE INICIO DE SESIÓN
+            # MENSAJES DE INICIO DE SESIÓN (igual que antes)
             # ==============================
             mensaje_principal = "¡Inicio de sesión exitoso!"
             mensaje_adicional = ""
             tipo_mensaje = "exito"
             dias_transcurridos = 0
             requiere_cambio_password = False
-            mensaje_urgente = (
-                False  # ← NUEVO: Flag para mensajes que requieren lectura manual
-            )
-            if not es_admin:  # ← Solo aplica reglas a no-admins
+            mensaje_urgente = False
+            if not es_admin:
                 # Control de primer login / cambio obligatorio
-                if not usuario.fecha_cambio_password:  # Nunca cambió contraseña
+                if not usuario.fecha_cambio_password:
                     if usuario.logins_exitosos == 1:
                         mensaje_adicional = (
                             "Cambie su contraseña, este es su primer inicio de sesión."
                         )
                         requiere_cambio_password = True
-                        mensaje_urgente = True  # ← NUEVO: Requiere cierre manual
-                        tipo_mensaje = "advertencia_urgente"  # ← NUEVO: Tipo especial
+                        mensaje_urgente = True
+                        tipo_mensaje = "advertencia_urgente"
                     elif usuario.logins_exitosos == 2:
-                        mensaje_adicional = "Debe cambiar su contraseña obligatoriamente, este es su segundo inicio de sesión. despues de este inicio de sesion sera bloqueada la cuenta si no cambia la contraseña"
+                        mensaje_adicional = "Debe cambiar su contraseña obligatoriamente, este es su segundo inicio de sesión. Después de este inicio de sesión será bloqueada la cuenta si no cambia la contraseña"
                         requiere_cambio_password = True
-                        mensaje_urgente = True  # ← NUEVO: Requiere cierre manual
-                        tipo_mensaje = "advertencia_urgente"  # ← NUEVO: Tipo especial
+                        mensaje_urgente = True
+                        tipo_mensaje = "advertencia_urgente"
                     elif usuario.logins_exitosos >= 3:
                         usuario.estado = False
                         usuario.save()
                         return Response(
                             {
-                                "error": "Cuenta bloqueada por no cambiar contraseña. Comuniquese con el administrador",
+                                "error": "Cuenta bloqueada por no cambiar contraseña. Comuníquese con el administrador",
                                 "tipo_mensaje": "error",
                             },
                             status=status.HTTP_403_FORBIDDEN,
                         )
 
-                # Control de caducidad (solo para no-admins)
+                # Control de caducidad
                 if usuario.fecha_cambio_password:
                     dias_transcurridos = (
                         timezone.now().date() - usuario.fecha_cambio_password.date()
@@ -245,24 +249,30 @@ class LoginView(APIView):
                     )
                     tipo_mensaje = "advertencia"
             else:
-                # Para admin: Mensaje simple
                 mensaje_adicional = "Bienvenido, administrador. Acceso completo."
 
+            # ==============================
+            # RESPUESTA PARA SELECCIÓN DE 2FA (NUEVO FLUJO)
+            # ==============================
             return Response(
                 {
-                    "access_token": access_token,
+                    "usuario_id": usuario.id,
+                    "requiere_2fa": True,
+                    "opciones_2fa": [
+                        "correo",
+                        "totp",
+                    ],  # ← AGREGADO: Para elección en frontend
+                    "mensaje": "Seleccione un método de verificación de dos factores.",
                     "roles": roles,
                     "permisos": permisos,
                     "nombre_usuario": usuario.nombre,
                     "apellido": usuario.apellido,
                     "imagen_url": usuario.imagen_url,
-                    "usuario_id": usuario.id,
-                    "mensaje": mensaje_principal,
                     "mensaje_adicional": mensaje_adicional,
                     "tipo_mensaje": tipo_mensaje,
                     "dias_transcurridos": dias_transcurridos,
                     "requiere_cambio_password": requiere_cambio_password,
-                    "mensaje_urgente": mensaje_urgente,  # ← NUEVO: Para manejo en frontend
+                    "mensaje_urgente": mensaje_urgente,
                 },
                 status=status.HTTP_200_OK,
             )
@@ -276,15 +286,241 @@ class LoginView(APIView):
                     payload=json.dumps(request.data),
                     user_agent=request.META.get("HTTP_USER_AGENT", ""),
                     bloqueado=True,
-                    fecha=now(),
+                    fecha=timezone.now(),  # ← MODIFICADO: Cambia 'now()' por 'timezone.now()'
                 )
                 print("[LoginView] Ataque registrado: usuario no encontrado")
             except Exception as e:
                 print("Error guardando ataque:", e)
-
             return Response(
                 {"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND
             )
+
+
+class Verificar2FAView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request):
+        usuario_id = request.data.get("usuario_id")
+        codigo = request.data.get("codigo")
+        metodo = request.data.get(
+            "metodo"
+        )  # ← MODIFICADO: Recibe 'metodo' del frontend ("correo" o "totp")
+
+        try:
+            usuario = Usuario.objects.get(id=usuario_id)
+        except Usuario.DoesNotExist:
+            return Response({"error": "Usuario no encontrado"}, status=404)
+
+        if not metodo or metodo not in ["correo", "totp"]:
+            return Response(
+                {"error": "Método 2FA inválido"}, status=400
+            )  # ← MODIFICADO: Valida metodo
+
+        # ← MODIFICADO: Verificar según 'metodo' elegido (no tipo_2fa fijo)
+        if metodo == "correo":
+            codigo_obj = (
+                Codigo2FA.objects.filter(usuario=usuario, codigo=codigo, expirado=False)
+                .order_by("-creado_en")
+                .first()
+            )
+            if not codigo_obj or not codigo_obj.es_valido():
+                return Response({"error": "Código inválido o caducado"}, status=400)
+            codigo_obj.expirado = True
+            codigo_obj.save()
+
+        elif metodo == "totp":
+            if not usuario.verificar_codigo_totp(codigo):
+                return Response({"error": "Código TOTP incorrecto"}, status=400)
+
+        # Generar token JWT definitivo
+        refresh = RefreshToken.for_user(usuario)
+        access_token = str(refresh.access_token)
+
+        return Response(
+            {
+                "access_token": access_token,
+                "usuario_id": usuario.id,
+                "roles": [ur.rol.nombre for ur in usuario.usuariorol_set.all()],
+                "mensaje": "Autenticación 2FA exitosa",
+            },
+            status=200,
+        )
+
+
+class GenerarQRView(APIView):  # ← NUEVO: Endpoint para generar QR al elegir TOTP
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request):
+        usuario_id = request.data.get("usuario_id")
+        try:
+            usuario = Usuario.objects.get(id=usuario_id)
+        except Usuario.DoesNotExist:
+            return Response({"error": "Usuario no encontrado"}, status=404)
+        # Generar secreto si no existe
+        usuario.generar_secret_2fa()
+        qr_base64 = usuario.generar_qr_authenticator()
+        return Response(
+            {
+                "qr_base64": qr_base64,
+                "mensaje": "Escanee este código QR con Google Authenticator.",
+            },
+            status=200,
+        )
+
+
+class EnviarCodigoCorreoView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request):
+        usuario_id = request.data.get("usuario_id")
+        try:
+            usuario = Usuario.objects.get(id=usuario_id)
+        except Usuario.DoesNotExist:
+            return Response({"error": "Usuario no encontrado"}, status=404)
+
+        # Buscar el código más reciente no expirado o crear uno nuevo
+        codigo_obj = (
+            Codigo2FA.objects.filter(usuario=usuario, expirado=False)
+            .order_by("-creado_en")
+            .first()
+        )
+        if codigo_obj and codigo_obj.es_valido():
+            codigo = codigo_obj.codigo
+        else:
+            codigo = get_random_string(6, allowed_chars="0123456789")
+            Codigo2FA.objects.create(usuario=usuario, codigo=codigo)
+
+        # Envío de correo (requerirá configuración SMTP o proveedor)
+        subject = "Código de verificación"
+        message = f"Hola {usuario.nombre}, tu código es: {codigo} (válido 5 minutos)."
+        try:
+            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [usuario.correo])
+        except Exception as e:
+            # En dev puede fallar si no configuras SMTP; lo imprimimos y retornamos OK para pruebas
+            print("[EnviarCodigoCorreo] No se pudo enviar email:", e)
+
+        return Response({"mensaje": "Código enviado"}, status=200)
+
+
+class ResetPasswordView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request):
+        correo = request.data.get("correo")
+        try:
+            usuario = Usuario.objects.get(correo=correo)
+        except Usuario.DoesNotExist:
+            return Response({"error": "Usuario no encontrado"}, status=404)
+        temp_pass = get_random_string(10)  # Genera temporal
+        # ← MODIFICADO: No actualizar password aún; guardar en token temporal
+        token = uuid.uuid4()
+        TempPasswordReset.objects.create(
+            usuario=usuario,
+            token=token,
+            temp_password=temp_pass,  # Plana para verificación (o encripta si prefieres)
+            usado=False,
+            expirado=False,
+        )
+        # Envío de correo con temp_pass
+        subject = "Restablecimiento de contraseña temporal"
+        message = f"Hola {usuario.nombre}, tu contraseña temporal es: {temp_pass}. Úsala para restablecer tu contraseña en el sistema. Válida por 15 minutos."
+        try:
+            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [usuario.correo])
+            print(
+                f"[ResetPassword] Temp_pass {temp_pass} enviada a {correo} con token {token}"
+            )
+        except Exception as e:
+            print(f"[ResetPassword] Error email: {e}")
+            # No falla la respuesta; asume enviado (o maneja rollback si quieres)
+        return Response(
+            {
+                "mensaje": "Se envió un correo con la contraseña temporal. Ingresa el código recibido para continuar.",
+                "usuario_id": usuario.id,
+                "temp_token": str(token),  # ← NUEVO: Retorna token para frontend
+            },
+            status=200,
+        )
+
+
+class VerificarTempPasswordView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request):
+        usuario_id = request.data.get("usuario_id")
+        temp_token = request.data.get("temp_token")
+        temp_pass = request.data.get("temp_pass")
+        try:
+            token_obj = TempPasswordReset.objects.get(
+                usuario_id=usuario_id, token=temp_token, usado=False
+            )
+        except TempPasswordReset.DoesNotExist:
+            return Response({"error": "Token inválido o expirado"}, status=400)
+        if not token_obj.es_valido():
+            token_obj.expirado = True
+            token_obj.save()
+            return Response({"error": "Token expirado o ya usado"}, status=400)
+        if (
+            token_obj.temp_password != temp_pass
+        ):  # ← Verifica contra la temp_pass guardada
+            # Opcional: Contar intentos y bloquear después de 3
+            return Response({"error": "Contraseña temporal incorrecta"}, status=400)
+        return Response(
+            {
+                "valid": True,
+                "mensaje": "Contraseña temporal verificada. Ingrese nueva contraseña.",
+            },
+            status=200,
+        )
+
+
+class CambiarPasswordTempView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request):
+        usuario_id = request.data.get("usuario_id")
+        temp_token = request.data.get("temp_token")
+        nueva_password = request.data.get("nueva_password")
+        confirmar_password = request.data.get("confirmar_password")
+        if nueva_password != confirmar_password:
+            return Response({"error": "Las contraseñas no coinciden"}, status=400)
+        if len(nueva_password) < 8:
+            return Response(
+                {"error": "La nueva contraseña debe tener al menos 8 caracteres"},
+                status=400,
+            )
+        try:
+            token_obj = TempPasswordReset.objects.get(
+                usuario_id=usuario_id, token=temp_token, usado=False
+            )
+        except TempPasswordReset.DoesNotExist:
+            return Response({"error": "Token inválido o expirado"}, status=400)
+        if not token_obj.es_valido():
+            token_obj.expirado = True
+            token_obj.save()
+            return Response({"error": "Token expirado o ya usado"}, status=400)
+        # Actualizar usuario
+        usuario = token_obj.usuario
+        usuario.password = make_password(nueva_password)
+        usuario.fecha_cambio_password = timezone.now()
+        usuario.intentos_fallidos = 0  # Reset
+        usuario.estado = True  # Reactivar si estaba bloqueado
+        usuario.save()
+        # Marcar token como usado
+        token_obj.usado = True
+        token_obj.save()
+        return Response(
+            {
+                "mensaje": "Contraseña actualizada exitosamente. Vuelve al login para ingresar con tu nueva contraseña.",
+                "usuario_id": usuario.id,
+            },
+            status=200,
+        )
 
 
 class RolViewSet(viewsets.ModelViewSet):
@@ -414,7 +650,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             # Mantener imagen actual si no se sube nueva
             data["imagen_url"] = instance.imagen_url
 
-        # ⚡ Detectar cambio de contraseña y reset de intentos fallidos
+        # Detectar cambio de contraseña y reset de intentos fallidos
         nueva_password = data.get("password")
         cambio_password = False
         if nueva_password and not check_password(nueva_password, instance.password):
@@ -423,7 +659,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             data["fecha_cambio_password"] = timezone.now()
             cambio_password = True  # ← NUEVO: Flag para reset
 
-        # ⚡ Detectar reactivación de usuario (estado False → True) y reset de intentos fallidos
+        #  Detectar reactivación de usuario (estado False → True) y reset de intentos fallidos
         nuevo_estado = data.get("estado", instance.estado)  # Usa actual si no se envía
         reactivacion = (
             not instance.estado
@@ -874,6 +1110,71 @@ class GastoOperacionViewSet(viewsets.ModelViewSet):
             )  # Filtrar por el ID del identificador
         return queryset
 
+    @action(detail=False, methods=["get"])
+    def unidades(self, request):
+        # Trae unidades únicas (distinct)
+        unidades = (
+            GastoOperacion.objects.values_list("unidad", flat=True)
+            .distinct()
+            .order_by("unidad")
+        )
+        return Response(unidades)
+
+    # Nuevo endpoint
+    @action(detail=False, methods=["get"])
+    def ultimos_precios(self, request):
+        proyecto_id = request.query_params.get("proyecto")
+        if not proyecto_id:
+            return Response({"error": "Debe proporcionar un proyecto"}, status=400)
+
+        # Traer todos los materiales vinculados a gastos de operaciones de este proyecto
+        Gasto_Operacion = (
+            GastoOperacion.objects.filter(
+                id_gasto_operacion__identificador__id_general=proyecto_id
+            )
+            .values("descripcion")
+            .annotate(ultimo_precio=Max("precio_unitario"))
+            .order_by("descripcion")
+        )
+        return Response(list(Gasto_Operacion))
+
+    @action(detail=False, methods=["post"])
+    def actualizar_precio_descripcion(self, request):
+        descripcion = request.data.get("descripcion")
+        id_gasto_operacion = request.data.get("id_gasto_operacion")
+        nuevo_precio = request.data.get("precio_unitario")
+
+        if not descripcion or not id_gasto_operacion or nuevo_precio is None:
+            return Response({"error": "Datos incompletos"}, status=400)
+
+        # Obtener el proyecto asociado al gasto de operación
+        try:
+            gasto = GastoOperacion.objects.get(id=id_gasto_operacion)
+        except GastoOperacion.DoesNotExist:
+            return Response({"error": "GastoOperacion no encontrado"}, status=404)
+
+        # Actualizar todos los materiales del mismo proyecto y misma descripción
+        Gasto_Operacion = GastoOperacion.objects.filter(
+            id_gasto_operacion__identificador=gasto.identificador,
+            descripcion__iexact=descripcion,
+        )
+
+        if not Gasto_Operacion.exists():
+            return Response(
+                {"error": "No se encontraron materiales para actualizar"}, status=404
+            )
+
+        Gasto_Operacion.update(precio_unitario=nuevo_precio)
+
+        return Response(
+            {
+                "success": True,
+                "descripcion": descripcion,
+                "nuevo_precio": nuevo_precio,
+                "actualizados": Gasto_Operacion.count(),
+            }
+        )
+
 
 # =====================================================
 # === =============  seccion 3   === ==================
@@ -944,7 +1245,7 @@ class MaterialesViewSet(viewsets.ModelViewSet):
             if "total" in data:
                 instance.total = data["total"]
 
-            # 👇 Solo se actualiza el modificado_por
+            # Solo se actualiza el modificado_por
             if "modificado_por" in data:
                 usuario = Usuario.objects.get(id=data["modificado_por"])
                 instance.modificado_por = usuario
@@ -966,15 +1267,71 @@ class MaterialesViewSet(viewsets.ModelViewSet):
         if id_gasto:
             queryset = queryset.filter(id_gasto_operacion=id_gasto)
         return queryset
+
     @action(detail=False, methods=["get"])
     def unidades(self, request):
-        # 🔹 Trae unidades únicas (distinct)
+        # Trae unidades únicas (distinct)
         unidades = (
             Materiales.objects.values_list("unidad", flat=True)
             .distinct()
             .order_by("unidad")
         )
         return Response(unidades)
+
+    # Nuevo endpoint
+    @action(detail=False, methods=["get"])
+    def ultimos_precios(self, request):
+        proyecto_id = request.query_params.get("proyecto")
+        if not proyecto_id:
+            return Response({"error": "Debe proporcionar un proyecto"}, status=400)
+
+        # Traer todos los materiales vinculados a gastos de operaciones de este proyecto
+        materiales = (
+            Materiales.objects.filter(
+                id_gasto_operacion__identificador__id_general=proyecto_id
+            )
+            .values("descripcion")
+            .annotate(ultimo_precio=Max("precio_unitario"))
+            .order_by("descripcion")
+        )
+        return Response(list(materiales))
+
+    @action(detail=False, methods=["post"])
+    def actualizar_precio_descripcion(self, request):
+        descripcion = request.data.get("descripcion")
+        id_gasto_operacion = request.data.get("id_gasto_operacion")
+        nuevo_precio = request.data.get("precio_unitario")
+
+        if not descripcion or not id_gasto_operacion or nuevo_precio is None:
+            return Response({"error": "Datos incompletos"}, status=400)
+
+        # Obtener el proyecto asociado al gasto de operación
+        try:
+            gasto = GastoOperacion.objects.get(id=id_gasto_operacion)
+        except GastoOperacion.DoesNotExist:
+            return Response({"error": "GastoOperacion no encontrado"}, status=404)
+
+        # Actualizar todos los materiales del mismo proyecto y misma descripción
+        materiales = Materiales.objects.filter(
+            id_gasto_operacion__identificador=gasto.identificador,
+            descripcion__iexact=descripcion,
+        )
+
+        if not materiales.exists():
+            return Response(
+                {"error": "No se encontraron materiales para actualizar"}, status=404
+            )
+
+        materiales.update(precio_unitario=nuevo_precio)
+
+        return Response(
+            {
+                "success": True,
+                "descripcion": descripcion,
+                "nuevo_precio": nuevo_precio,
+                "actualizados": materiales.count(),
+            }
+        )
 
 
 class ManoDeObraViewSet(viewsets.ModelViewSet):
@@ -1063,6 +1420,65 @@ class ManoDeObraViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(id_gasto_operacion=id_gasto)
         return queryset
 
+    @action(detail=False, methods=["get"])
+    def unidades(self, request):
+        # Trae unidades únicas (distinct)
+        unidades = (
+            ManoDeObra.objects.values_list("unidad", flat=True)
+            .distinct()
+            .order_by("unidad")
+        )
+        return Response(unidades)
+
+    # Nuevo endpoint
+    @action(detail=False, methods=["get"])
+    def ultimos_precios(self, request):
+        proyecto_id = request.query_params.get("proyecto")
+        if not proyecto_id:
+            return Response({"error": "Debe proporcionar un proyecto"}, status=400)
+
+        # Traer todos los materiales vinculados a gastos de operaciones de este proyecto
+        mano_de_obra = (
+            ManoDeObra.objects.filter(
+                id_gasto_operacion__identificador__id_general=proyecto_id
+            )
+            .values("descripcion")
+            .annotate(ultimo_precio=Max("precio_unitario"))
+            .order_by("descripcion")
+        )
+        return Response(list(mano_de_obra))
+
+    @action(detail=False, methods=["post"])
+    def actualizar_precio_descripcion(self, request):
+        descripcion = request.data.get("descripcion")
+        id_gasto_operacion = request.data.get("id_gasto_operacion")
+        nuevo_precio = request.data.get("precio_unitario")
+
+        if not descripcion or not id_gasto_operacion or nuevo_precio is None:
+            return Response({"error": "Datos incompletos"}, status=400)
+        try:
+            gasto = GastoOperacion.objects.get(id=id_gasto_operacion)
+        except GastoOperacion.DoesNotExist:
+            return Response({"error": "GastoOperacion no encontrado"}, status=404)
+        # Actualizar todos los registros de mano de obra del mismo proyecto y misma descripción
+        mano_obra_items = ManoDeObra.objects.filter(
+            id_gasto_operacion__identificador=gasto.identificador,
+            descripcion__iexact=descripcion,
+        )
+        if not mano_obra_items.exists():
+            return Response(
+                {"error": "No se encontraron registros para actualizar"}, status=404
+            )
+        mano_obra_items.update(precio_unitario=nuevo_precio)
+        return Response(
+            {
+                "success": True,
+                "descripcion": descripcion,
+                "nuevo_precio": nuevo_precio,
+                "actualizados": mano_obra_items.count(),
+            }
+        )
+
 
 class EquipoHerramientaViewSet(viewsets.ModelViewSet):
     queryset = EquipoHerramienta.objects.all()
@@ -1149,6 +1565,71 @@ class EquipoHerramientaViewSet(viewsets.ModelViewSet):
         if id_gasto:
             queryset = queryset.filter(id_gasto_operacion=id_gasto)
         return queryset
+
+    @action(detail=False, methods=["get"])
+    def unidades(self, request):
+        unidades = (
+            EquipoHerramienta.objects.values_list("unidad", flat=True)
+            .distinct()
+            .order_by("unidad")
+        )
+        return Response(unidades)
+
+        # Nuevo endpoint
+
+    @action(detail=False, methods=["get"])
+    def ultimos_precios(self, request):
+        proyecto_id = request.query_params.get("proyecto")
+        if not proyecto_id:
+            return Response({"error": "Debe proporcionar un proyecto"}, status=400)
+
+        equipo_herramienta = (
+            EquipoHerramienta.objects.filter(
+                id_gasto_operacion__identificador__id_general=proyecto_id
+            )
+            .values("descripcion")
+            .annotate(ultimo_precio=Max("precio_unitario"))
+            .order_by("descripcion")
+        )
+        return Response(list(equipo_herramienta))
+
+    @action(detail=False, methods=["post"])
+    def actualizar_precio_descripcion(self, request):
+        descripcion = request.data.get("descripcion")
+        id_gasto_operacion = request.data.get("id_gasto_operacion")
+        nuevo_precio = request.data.get("precio_unitario")
+
+        if not descripcion or not id_gasto_operacion or nuevo_precio is None:
+            return Response({"error": "Datos incompletos"}, status=400)
+
+        # Obtener el proyecto asociado al gasto de operación
+        try:
+            gasto = GastoOperacion.objects.get(id=id_gasto_operacion)
+        except GastoOperacion.DoesNotExist:
+            return Response({"error": "GastoOperacion no encontrado"}, status=404)
+
+        # Actualizar todos los equipos del mismo proyecto y misma descripción
+        equipo_herramienta = EquipoHerramienta.objects.filter(
+            id_gasto_operacion__identificador=gasto.identificador,
+            descripcion__iexact=descripcion,
+        )
+
+        if not equipo_herramienta.exists():
+            return Response(
+                {"error": "No se encontraron equipos para actualizar"},
+                status=404,
+            )
+
+        equipo_herramienta.update(precio_unitario=nuevo_precio)
+
+        return Response(
+            {
+                "success": True,
+                "descripcion": descripcion,
+                "nuevo_precio": nuevo_precio,
+                "actualizados": equipo_herramienta.count(),
+            }
+        )
 
 
 class GastosGeneralesViewSet(viewsets.ModelViewSet):
