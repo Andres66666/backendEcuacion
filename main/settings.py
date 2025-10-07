@@ -70,10 +70,12 @@ MIDDLEWARE = [
     "django_otp.middleware.OTPMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # tus middlewares personalizados van al final
     "GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseMiddleware",
     "GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseMiddleware",
     "users.middleware.AuditoriaMiddleware",
 ]
+
 LOGIN_URL = "two_factor:login"
 LOGIN_REDIRECT_URL = "two_factor:profile"
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
@@ -165,11 +167,17 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:4200",
     "http://127.0.0.1:4200",
     "https://mallafinita.netlify.app",
-    "https://*.netlify.app",
 ]
-CORS_ALLOW_HEADERS = ["*"]
-CSRF_TRUSTED_ORIGINS = ["https://mallafinita.netlify.app"]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://mallafinita.netlify.app",
+    "https://backendecuacion.onrender.com",
+]
+
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = ["*"]
+
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
 APPEND_SLASH = True  # O False, según tu preferencia
 
