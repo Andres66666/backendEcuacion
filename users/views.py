@@ -1,7 +1,27 @@
+from rest_framework import viewsets, serializers, status
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny, IsAdminUser
+from rest_framework.decorators import action
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth.hashers import check_password, make_password
 from django.utils import timezone
-
-import cloudinary
+from django.db.models import Prefetch, Max
+from django.core.mail import send_mail
+from django.conf import settings
+from django.utils.crypto import get_random_string
 from django.shortcuts import render
+import json
+import uuid
+import cloudinary
+from cloudinary import uploader
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from datetime import timedelta
+import pyotp
+import qrcode
+import io
+import base64
+
 from .models import (
     Atacante,
     Codigo2FA,
@@ -19,6 +39,7 @@ from .models import (
     Usuario,
     UsuarioRol,
 )
+
 from .serializers import (
     AtacanteSerializer,
     EquipoHerramientaSerializer,
@@ -35,38 +56,7 @@ from .serializers import (
     UsuarioRolSerializer,
     UsuarioSerializer,
 )
-from rest_framework import viewsets
-from rest_framework import viewsets, status
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from django.db.models import Prefetch
-from django.contrib.auth.hashers import check_password
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework import status
-from cloudinary import uploader
-from django.db import models
-from decimal import Decimal, ROUND_HALF_UP
-from rest_framework.decorators import action
 
-from decimal import Decimal, InvalidOperation
-from datetime import timedelta
-from django.utils.timezone import now
-from django.contrib.auth.hashers import make_password, check_password
-
-from rest_framework.permissions import IsAdminUser
-from rest_framework.permissions import AllowAny
-
-import json
-from django.db.models import Max
-from django.utils.crypto import get_random_string
-from django.conf import settings
-from django.core.mail import send_mail
-import pyotp, qrcode
-import io
-import base64
-from django.utils.crypto import get_random_string
-import uuid
-from datetime import timedelta
 
 # =====================================================
 # === =============  seccion 1   === ==================
@@ -291,6 +281,12 @@ class LoginView(APIView):
                 print("[LoginView] Ataque registrado: usuario no encontrado")
             except Exception as e:
                 print("Error guardando ataque:", e)
+                import traceback
+
+                print(
+                    f"LoginView Crash: {type(e).__name__}: {str(e)}\n{traceback.format_exc()}"
+                )
+                return Response({"error": f"Server error: {str(e)}"}, status=500)
             return Response(
                 {"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND
             )
@@ -336,6 +332,10 @@ class Verificar2FAView(APIView):
         # Generar token JWT definitivo
         refresh = RefreshToken.for_user(usuario)
         access_token = str(refresh.access_token)
+        # Temporal: Token simple (hasta fixear model)
+        access_token = get_random_string(
+            32
+        )  # Placeholder – no seguro, pero evita crash
 
         return Response(
             {

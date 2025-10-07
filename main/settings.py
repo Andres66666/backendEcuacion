@@ -13,7 +13,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = "django-insecure-(fn$sd-g@*)51f7)nc!a^3xeb(ma^9f6pm02_a+2h6tw^251fq"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+
+DEBUG = os.getenv("DEBUG", "True").lower() == "true"  # ← False en Render via env var
+
 
 # protegemos las rutas del servidor
 
@@ -24,8 +26,11 @@ DEBUG = True
     "localhost",
     # coloca la red asiganda para pruebas univalle
 ] """
-ALLOWED_HOSTS = ["*"] if DEBUG else ["backendecuacion.onrender.com"]
-ALLOWED_HOSTS = ["backendecuacion.onrender.com", "localhost", "127.0.0.1"]
+# ALLOWED_HOSTS: Simplifica y usa env
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") + [
+    "backendecuacion.onrender.com"
+]
+
 
 # Application definition
 INSTALLED_APPS = [
@@ -75,8 +80,9 @@ EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "benitoandrescalle035@gmail.com")
 EMAIL_HOST_USER = "benitoandrescalle035@gmail.com"
-EMAIL_HOST_PASSWORD = "hmczrcgooenggoms"  # sin espacios
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "hmczrcgooenggoms")
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 
