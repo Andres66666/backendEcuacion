@@ -56,7 +56,8 @@ from .serializers import (
     UsuarioRolSerializer,
     UsuarioSerializer,
 )
-
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 
 # =====================================================
 # === =============  seccion 1   === ==================
@@ -70,6 +71,7 @@ class AtacanteViewSet(viewsets.ModelViewSet):
     serializer_class = AtacanteSerializer
 
 
+@method_decorator(csrf_exempt, name="dispatch")
 class LoginView(APIView):
     authentication_classes = []
     permission_classes = []
