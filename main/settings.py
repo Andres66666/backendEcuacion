@@ -62,9 +62,9 @@ MIDDLEWARE = [
     "django_otp.middleware.OTPMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseMiddleware",
-    "GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseMiddleware",
-    "users.middleware.AuditoriaMiddleware",
+    # "GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseMiddleware",
+    # "GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseMiddleware",
+    # "users.middleware.AuditoriaMiddleware",
 ]
 LOGIN_URL = "two_factor:login"
 LOGIN_REDIRECT_URL = "two_factor:profile"
