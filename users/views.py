@@ -90,7 +90,9 @@ class LoginView(APIView):
 
     def post(self, request):
         try:
+            # ==============================
             # Validación inicial del serializer
+            # ==============================
             serializer = LoginSerializer(data=request.data)
             if not serializer.is_valid():
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -111,7 +113,9 @@ class LoginView(APIView):
                 ),
             ).get(correo=correo)
 
+            # ==============================
             # Roles y permisos seguros
+            # ==============================
             roles = [ur.rol.nombre for ur in usuario.usuariorol_set.all() if ur.rol]
             permisos = []
             for ur in usuario.usuariorol_set.all():
@@ -196,6 +200,13 @@ class LoginView(APIView):
             mensaje_urgente = False
 
             if not es_admin:
+                fecha_ref = (
+                    usuario.fecha_cambio_password
+                    or usuario.fecha_creacion
+                    or timezone.now()
+                )
+                dias_transcurridos = (timezone.now().date() - fecha_ref.date()).days
+
                 if not usuario.fecha_cambio_password:
                     if usuario.logins_exitosos == 1:
                         mensaje_adicional = (
@@ -219,10 +230,6 @@ class LoginView(APIView):
                             },
                             status=status.HTTP_403_FORBIDDEN,
                         )
-
-                # Control de caducidad de contraseña
-                fecha_ref = usuario.fecha_cambio_password or usuario.fecha_creacion
-                dias_transcurridos = (timezone.now().date() - fecha_ref.date()).days
 
                 if dias_transcurridos >= 90:
                     usuario.estado = False
@@ -259,8 +266,8 @@ class LoginView(APIView):
                     "mensaje": "Seleccione un método de verificación de dos factores.",
                     "roles": roles,
                     "permisos": permisos,
-                    "nombre_usuario": usuario.nombre,
-                    "apellido": usuario.apellido,
+                    "nombre_usuario": usuario.nombre or "",
+                    "apellido": usuario.apellido or "",
                     "imagen_url": usuario.imagen_url or "",
                     "mensaje_adicional": mensaje_adicional,
                     "tipo_mensaje": tipo_mensaje,
