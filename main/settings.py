@@ -111,11 +111,11 @@ WSGI_APPLICATION = "main.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("DB_NAME", "ecuacion"),
-        "USER": os.getenv("DB_USER", "ecuacion_user"),
-        "PASSWORD": os.getenv("DB_PASSWORD", "aPNuMZDruvJcndzpKOwycaTecZYJMMu0"),
+        "NAME": os.getenv("DB_NAME", "ecuacion_wtpx"),
+        "USER": os.getenv("DB_USER", "ecuacion_wtpx_user"),
+        "PASSWORD": os.getenv("DB_PASSWORD", "hHSiKOLZtIxbxmvw3W9MWADpB2x7xBjR"),
         "HOST": os.getenv(
-            "DB_HOST", "dpg-d38se1nfte5s73cc7j6g-a.oregon-postgres.render.com"
+            "DB_HOST", "dpg-d3i6ttre5dus738shkig-a.oregon-postgres.render.com"
         ),
         "PORT": os.getenv("DB_PORT", "5432"),
     }
