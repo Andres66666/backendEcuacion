@@ -61,7 +61,7 @@ REST_FRAMEWORK = {
 # MIDDLEWARE
 # ========================================
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",  # ← Debe ir antes de CommonMiddleware
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -71,10 +71,8 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # Tus middlewares personalizados al final
-    "GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseMiddleware",
-    "GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseMiddleware",
-    "users.middleware.AuditoriaMiddleware",
 ]
+
 
 # ========================================
 # URLS / WSGI
@@ -166,18 +164,15 @@ cloudinary.config(
 # CORS & CSRF
 # ========================================
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:4200",
-    "http://127.0.0.1:4200",
     "https://mallafinita.netlify.app",
+    "https://backendecuacion.onrender.com",
 ]
-
 CSRF_TRUSTED_ORIGINS = [
     "https://mallafinita.netlify.app",
     "https://backendecuacion.onrender.com",
 ]
-
 # Durante pruebas
-CORS_ALLOW_ALL_ORIGINS = True  # ⚠️ Desactiva en producción
+CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = ["*"]
 
