@@ -17,13 +17,16 @@ DEBUG = True
 
 # protegemos las rutas del servidor
 
-ALLOWED_HOSTS = [
+""" ALLOWED_HOSTS = [
     "backendecuacion.onrender.com",
     "192.168.0.4",
     "127.0.0.1",
     "localhost",
     # coloca la red asiganda para pruebas univalle
-]
+] """
+ALLOWED_HOSTS = ["*"] if DEBUG else ["backendecuacion.onrender.com"]
+ALLOWED_HOSTS = ["backendecuacion.onrender.com", "localhost", "127.0.0.1"]
+
 # Application definition
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -208,19 +211,19 @@ USE_TZ = True
 
 
 # Lista de IPs confiables que no serán bloqueadas ni analizadas
-SQLI_DEFENSE_TRUSTED_IPS = [
+""" SQLI_DEFENSE_TRUSTED_IPS = [
     "127.0.0.1",  # localhost
     "192.168.0.4",  # tu máquina interna, por ejemplo
     # coloca la red asiganda para pruebas univalle
-]
-XSS_DEFENSE_TRUSTED_IPS = [
+] """
+""" XSS_DEFENSE_TRUSTED_IPS = [
     "127.0.0.1",
     "192.168.0.4",
-]
-XSS_DEFENSE_SANITIZE_INPUT = False  # True si quieres sanitizar automáticamente
+] """
+""" XSS_DEFENSE_SANITIZE_INPUT = False  # True si quieres sanitizar automáticamente
 XSS_DEFENSE_BLOCK = True  # Bloquear petición si se detecta XSS
 XSS_DEFENSE_EXCLUDED_PATHS = ["/health", "/internal"]
-
+ """
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -241,6 +244,8 @@ LOGGING = {
         },
     },
 }
+# Configuraciones de seguridad para producción
+
 
 # ejecuta este comando para probar el ataque en termux
 # python manage.py runserver 0.0.0.0:8000
