@@ -103,15 +103,11 @@ class LoginView(APIView):
             # ==============================
             # Obtener usuario con roles y permisos
             # ==============================
-            usuario = Usuario.objects.prefetch_related(
-                Prefetch(
-                    "usuariorol_set", queryset=UsuarioRol.objects.select_related("rol")
-                ),
-                Prefetch(
-                    "usuariorol_set__rol__rolpermiso_set",
-                    queryset=RolPermiso.objects.select_related("permiso"),
-                ),
-            ).get(correo=correo)
+            usuario = (
+                Usuario.objects.prefetch_related(...).filter(correo=correo).first()
+            )
+            if not usuario:
+                return Response({"error": "Usuario no encontrado"}, status=404)
 
             # ==============================
             # Roles y permisos seguros
@@ -346,6 +342,11 @@ class Verificar2FAView(APIView):
             codigo_obj.save()
 
         elif metodo == "totp":
+            if not usuario.secret_2fa:
+                return Response(
+                    {"error": "Usuario no configurado para TOTP"}, status=400
+                )
+
             if not usuario.verificar_codigo_totp(codigo):
                 return Response({"error": "Código TOTP incorrecto"}, status=400)
 
