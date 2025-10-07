@@ -156,7 +156,9 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:4200",
     "http://127.0.0.1:4200",
     "https://mallafinita.netlify.app",
+    "https://*.netlify.app",
 ]
+CORS_ALLOW_HEADERS = ["*"]
 CSRF_TRUSTED_ORIGINS = ["https://mallafinita.netlify.app"]
 CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
