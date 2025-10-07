@@ -71,20 +71,36 @@ class AtacanteViewSet(viewsets.ModelViewSet):
     serializer_class = AtacanteSerializer
 
 
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from django.utils import timezone
+from datetime import timedelta
+from django.db.models import Prefetch
+from django.contrib.auth.hashers import check_password
+import json
+
+
 @method_decorator(csrf_exempt, name="dispatch")
 class LoginView(APIView):
     authentication_classes = []
     permission_classes = []
 
     def post(self, request):
-        serializer = LoginSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        correo = serializer.validated_data.get("correo")
-        password = serializer.validated_data.get("password")
-
         try:
+            # Validación inicial del serializer
+            serializer = LoginSerializer(data=request.data)
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            correo = serializer.validated_data.get("correo")
+            password = serializer.validated_data.get("password")
+
+            # ==============================
+            # Obtener usuario con roles y permisos
+            # ==============================
             usuario = Usuario.objects.prefetch_related(
                 Prefetch(
                     "usuariorol_set", queryset=UsuarioRol.objects.select_related("rol")
@@ -95,9 +111,18 @@ class LoginView(APIView):
                 ),
             ).get(correo=correo)
 
-            es_admin = "Administrador" in [
-                ur.rol.nombre for ur in usuario.usuariorol_set.all()
-            ]
+            # Roles y permisos seguros
+            roles = [ur.rol.nombre for ur in usuario.usuariorol_set.all() if ur.rol]
+            permisos = []
+            for ur in usuario.usuariorol_set.all():
+                if ur.rol:
+                    permisos += [
+                        rp.permiso.nombre
+                        for rp in ur.rol.rolpermiso_set.all()
+                        if rp.permiso
+                    ]
+
+            es_admin = "Administrador" in roles
 
             if not usuario.estado:
                 return Response(
@@ -109,10 +134,11 @@ class LoginView(APIView):
                 )
 
             # ==============================
-            # INTENTOS FALLIDOS (EXENTO PARA ADMIN)
+            # Validación de contraseña
             # ==============================
             if not check_password(password, usuario.password):
                 if not es_admin:
+                    # Control de intentos fallidos
                     if usuario.intentos_fallidos >= 3:
                         if (
                             usuario.ultimo_intento
@@ -134,7 +160,7 @@ class LoginView(APIView):
                         mensaje_error = "Credenciales incorrectas. Intento 1 de 3."
                     elif usuario.intentos_fallidos == 2:
                         mensaje_error = "Credenciales incorrectas. Intento 2 de 3. Contacte con el administrador si olvidó su contraseña."
-                    elif usuario.intentos_fallidos >= 3:
+                    else:
                         usuario.estado = False
                         mensaje_error = "Credenciales incorrectas. Intentos superados. Cuenta inhabilitada, comuníquese con el administrador."
 
@@ -153,38 +179,23 @@ class LoginView(APIView):
                     )
 
             # ==============================
-            # LOGIN EXITOSO: Reset contadores (siempre)
+            # Login exitoso
             # ==============================
             usuario.intentos_fallidos = 0
             usuario.logins_exitosos += 1
             usuario.ultimo_intento = timezone.now()
             usuario.save()
 
-            roles = [ur.rol.nombre for ur in usuario.usuariorol_set.all()]
-            permisos = []
-            for ur in usuario.usuariorol_set.all():
-                permisos += [rp.permiso.nombre for rp in ur.rol.rolpermiso_set.all()]
-
-            if not roles or not permisos:
-                return Response(
-                    {
-                        "error": "El usuario no tiene roles ni permisos asignados.",
-                        "tipo_mensaje": "error",
-                    },
-                    status=status.HTTP_403_FORBIDDEN,
-                )
-
             # ==============================
-            # MENSAJES DE INICIO DE SESIÓN (igual que antes)
+            # Mensajes de seguridad / password
             # ==============================
-            mensaje_principal = "¡Inicio de sesión exitoso!"
             mensaje_adicional = ""
             tipo_mensaje = "exito"
             dias_transcurridos = 0
             requiere_cambio_password = False
             mensaje_urgente = False
+
             if not es_admin:
-                # Control de primer login / cambio obligatorio
                 if not usuario.fecha_cambio_password:
                     if usuario.logins_exitosos == 1:
                         mensaje_adicional = (
@@ -194,7 +205,7 @@ class LoginView(APIView):
                         mensaje_urgente = True
                         tipo_mensaje = "advertencia_urgente"
                     elif usuario.logins_exitosos == 2:
-                        mensaje_adicional = "Debe cambiar su contraseña obligatoriamente, este es su segundo inicio de sesión. Después de este inicio de sesión será bloqueada la cuenta si no cambia la contraseña"
+                        mensaje_adicional = "Debe cambiar su contraseña obligatoriamente, este es su segundo inicio de sesión."
                         requiere_cambio_password = True
                         mensaje_urgente = True
                         tipo_mensaje = "advertencia_urgente"
@@ -209,15 +220,9 @@ class LoginView(APIView):
                             status=status.HTTP_403_FORBIDDEN,
                         )
 
-                # Control de caducidad
-                if usuario.fecha_cambio_password:
-                    dias_transcurridos = (
-                        timezone.now().date() - usuario.fecha_cambio_password.date()
-                    ).days
-                else:
-                    dias_transcurridos = (
-                        timezone.now().date() - usuario.fecha_creacion.date()
-                    ).days
+                # Control de caducidad de contraseña
+                fecha_ref = usuario.fecha_cambio_password or usuario.fecha_creacion
+                dias_transcurridos = (timezone.now().date() - fecha_ref.date()).days
 
                 if dias_transcurridos >= 90:
                     usuario.estado = False
@@ -244,22 +249,19 @@ class LoginView(APIView):
                 mensaje_adicional = "Bienvenido, administrador. Acceso completo."
 
             # ==============================
-            # RESPUESTA PARA SELECCIÓN DE 2FA (NUEVO FLUJO)
+            # Respuesta final con 2FA
             # ==============================
             return Response(
                 {
                     "usuario_id": usuario.id,
                     "requiere_2fa": True,
-                    "opciones_2fa": [
-                        "correo",
-                        "totp",
-                    ],  # ← AGREGADO: Para elección en frontend
+                    "opciones_2fa": ["correo", "totp"],
                     "mensaje": "Seleccione un método de verificación de dos factores.",
                     "roles": roles,
                     "permisos": permisos,
                     "nombre_usuario": usuario.nombre,
                     "apellido": usuario.apellido,
-                    "imagen_url": usuario.imagen_url,
+                    "imagen_url": usuario.imagen_url or "",
                     "mensaje_adicional": mensaje_adicional,
                     "tipo_mensaje": tipo_mensaje,
                     "dias_transcurridos": dias_transcurridos,
@@ -282,15 +284,24 @@ class LoginView(APIView):
                 )
                 print("[LoginView] Ataque registrado: usuario no encontrado")
             except Exception as e:
-                print("Error guardando ataque:", e)
                 import traceback
 
                 print(
                     f"LoginView Crash: {type(e).__name__}: {str(e)}\n{traceback.format_exc()}"
                 )
-                return Response({"error": f"Server error: {str(e)}"}, status=500)
             return Response(
                 {"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        except Exception as e:
+            import traceback
+
+            print(
+                f"[LoginView] Error interno: {type(e).__name__}: {str(e)}\n{traceback.format_exc()}"
+            )
+            return Response(
+                {"error": "Error interno del servidor"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
 
