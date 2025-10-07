@@ -221,5 +221,26 @@ XSS_DEFENSE_SANITIZE_INPUT = False  # True si quieres sanitizar automáticamente
 XSS_DEFENSE_BLOCK = True  # Bloquear petición si se detecta XSS
 XSS_DEFENSE_EXCLUDED_PATHS = ["/health", "/internal"]
 
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "DEBUG",  # ← Cambia a INFO en prod
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
+    },
+}
+
 # ejecuta este comando para probar el ataque en termux
 # python manage.py runserver 0.0.0.0:8000
