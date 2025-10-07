@@ -1,27 +1,7 @@
-from rest_framework import viewsets, serializers, status
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import AllowAny, IsAdminUser
-from rest_framework.decorators import action
-from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth.hashers import check_password, make_password
 from django.utils import timezone
-from django.db.models import Prefetch, Max
-from django.core.mail import send_mail
-from django.conf import settings
-from django.utils.crypto import get_random_string
-from django.shortcuts import render
-import json
-import uuid
-import cloudinary
-from cloudinary import uploader
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
-from datetime import timedelta
-import pyotp
-import qrcode
-import io
-import base64
 
+import cloudinary
+from django.shortcuts import render
 from .models import (
     Atacante,
     Codigo2FA,
@@ -39,7 +19,6 @@ from .models import (
     Usuario,
     UsuarioRol,
 )
-
 from .serializers import (
     AtacanteSerializer,
     EquipoHerramientaSerializer,
@@ -56,8 +35,38 @@ from .serializers import (
     UsuarioRolSerializer,
     UsuarioSerializer,
 )
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
+from rest_framework import viewsets
+from rest_framework import viewsets, status
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from django.db.models import Prefetch
+from django.contrib.auth.hashers import check_password
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework import status
+from cloudinary import uploader
+from django.db import models
+from decimal import Decimal, ROUND_HALF_UP
+from rest_framework.decorators import action
+
+from decimal import Decimal, InvalidOperation
+from datetime import timedelta
+from django.utils.timezone import now
+from django.contrib.auth.hashers import make_password, check_password
+
+from rest_framework.permissions import IsAdminUser
+from rest_framework.permissions import AllowAny
+
+import json
+from django.db.models import Max
+from django.utils.crypto import get_random_string
+from django.conf import settings
+from django.core.mail import send_mail
+import pyotp, qrcode
+import io
+import base64
+from django.utils.crypto import get_random_string
+import uuid
+from datetime import timedelta
 
 # =====================================================
 # === =============  seccion 1   === ==================
@@ -79,7 +88,8 @@ from rest_framework import status
 from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Prefetch
-from django.contrib.auth.hashers import check_password
+from django.contrib.auth.hashers import check_password, make_password
+from django.utils.crypto import get_random_string
 import json
 
 
@@ -90,9 +100,6 @@ class LoginView(APIView):
 
     def post(self, request):
         try:
-            # ==============================
-            # Validación inicial del serializer
-            # ==============================
             serializer = LoginSerializer(data=request.data)
             if not serializer.is_valid():
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -100,18 +107,38 @@ class LoginView(APIView):
             correo = serializer.validated_data.get("correo")
             password = serializer.validated_data.get("password")
 
-            # ==============================
-            # Obtener usuario con roles y permisos
-            # ==============================
             usuario = (
-                Usuario.objects.prefetch_related(...).filter(correo=correo).first()
+                Usuario.objects.prefetch_related(
+                    Prefetch(
+                        "usuariorol_set",
+                        queryset=UsuarioRol.objects.select_related("rol"),
+                    ),
+                    Prefetch(
+                        "usuariorol_set__rol__rolpermiso_set",
+                        queryset=RolPermiso.objects.select_related("permiso"),
+                    ),
+                )
+                .filter(correo=correo)
+                .first()
             )
+
             if not usuario:
+                # Registrar atacante
+                try:
+                    Atacante.objects.create(
+                        ip=request.META.get("REMOTE_ADDR"),
+                        tipos="Usuario no encontrado",
+                        descripcion="Intento de login con correo inexistente",
+                        payload=json.dumps(request.data),
+                        user_agent=request.META.get("HTTP_USER_AGENT", ""),
+                        bloqueado=True,
+                        fecha=timezone.now(),
+                    )
+                except Exception as e:
+                    print("[LoginView] Error al registrar atacante:", e)
                 return Response({"error": "Usuario no encontrado"}, status=404)
 
-            # ==============================
-            # Roles y permisos seguros
-            # ==============================
+            # Roles y permisos
             roles = [ur.rol.nombre for ur in usuario.usuariorol_set.all() if ur.rol]
             permisos = []
             for ur in usuario.usuariorol_set.all():
@@ -130,70 +157,55 @@ class LoginView(APIView):
                         "error": "Usuario desactivado. Contacte al administrador.",
                         "tipo_mensaje": "error",
                     },
-                    status=status.HTTP_403_FORBIDDEN,
+                    status=403,
                 )
 
-            # ==============================
             # Validación de contraseña
-            # ==============================
             if not check_password(password, usuario.password):
                 if not es_admin:
-                    # Control de intentos fallidos
-                    if usuario.intentos_fallidos >= 3:
-                        if (
-                            usuario.ultimo_intento
-                            and timezone.now() - usuario.ultimo_intento
-                            < timedelta(minutes=10)
-                        ):
-                            return Response(
-                                {
-                                    "error": "Demasiados intentos fallidos. Intente nuevamente en 10 minutos.",
-                                    "tipo_mensaje": "error",
-                                },
-                                status=status.HTTP_403_FORBIDDEN,
-                            )
-
+                    if (
+                        usuario.intentos_fallidos >= 3
+                        and usuario.ultimo_intento
+                        and timezone.now() - usuario.ultimo_intento
+                        < timedelta(minutes=10)
+                    ):
+                        return Response(
+                            {
+                                "error": "Demasiados intentos fallidos. Intente nuevamente en 10 minutos.",
+                                "tipo_mensaje": "error",
+                            },
+                            status=403,
+                        )
                     usuario.intentos_fallidos += 1
                     usuario.ultimo_intento = timezone.now()
-
-                    if usuario.intentos_fallidos == 1:
-                        mensaje_error = "Credenciales incorrectas. Intento 1 de 3."
-                    elif usuario.intentos_fallidos == 2:
-                        mensaje_error = "Credenciales incorrectas. Intento 2 de 3. Contacte con el administrador si olvidó su contraseña."
-                    else:
-                        usuario.estado = False
-                        mensaje_error = "Credenciales incorrectas. Intentos superados. Cuenta inhabilitada, comuníquese con el administrador."
-
                     usuario.save()
                     return Response(
-                        {"error": mensaje_error, "tipo_mensaje": "error"},
-                        status=status.HTTP_400_BAD_REQUEST,
+                        {
+                            "error": f"Credenciales incorrectas. Intento {usuario.intentos_fallidos} de 3.",
+                            "tipo_mensaje": "error",
+                        },
+                        status=400,
                     )
                 else:
                     return Response(
                         {
-                            "error": "Credenciales incorrectas. Como administrador, revise sus datos sin penalizaciones.",
+                            "error": "Credenciales incorrectas como administrador.",
                             "tipo_mensaje": "advertencia",
                         },
-                        status=status.HTTP_400_BAD_REQUEST,
+                        status=400,
                     )
 
-            # ==============================
             # Login exitoso
-            # ==============================
             usuario.intentos_fallidos = 0
             usuario.logins_exitosos += 1
             usuario.ultimo_intento = timezone.now()
             usuario.save()
 
-            # ==============================
-            # Mensajes de seguridad / password
-            # ==============================
+            # Mensaje adicional por password
             mensaje_adicional = ""
             tipo_mensaje = "exito"
-            dias_transcurridos = 0
             requiere_cambio_password = False
-            mensaje_urgente = False
+            dias_transcurridos = 0
 
             if not es_admin:
                 fecha_ref = (
@@ -202,58 +214,22 @@ class LoginView(APIView):
                     or timezone.now()
                 )
                 dias_transcurridos = (timezone.now().date() - fecha_ref.date()).days
-
-                if not usuario.fecha_cambio_password:
-                    if usuario.logins_exitosos == 1:
-                        mensaje_adicional = (
-                            "Cambie su contraseña, este es su primer inicio de sesión."
-                        )
-                        requiere_cambio_password = True
-                        mensaje_urgente = True
-                        tipo_mensaje = "advertencia_urgente"
-                    elif usuario.logins_exitosos == 2:
-                        mensaje_adicional = "Debe cambiar su contraseña obligatoriamente, este es su segundo inicio de sesión."
-                        requiere_cambio_password = True
-                        mensaje_urgente = True
-                        tipo_mensaje = "advertencia_urgente"
-                    elif usuario.logins_exitosos >= 3:
-                        usuario.estado = False
-                        usuario.save()
-                        return Response(
-                            {
-                                "error": "Cuenta bloqueada por no cambiar contraseña. Comuníquese con el administrador",
-                                "tipo_mensaje": "error",
-                            },
-                            status=status.HTTP_403_FORBIDDEN,
-                        )
-
                 if dias_transcurridos >= 90:
                     usuario.estado = False
                     usuario.save()
                     return Response(
                         {
-                            "error": "Su contraseña ha caducado y su cuenta fue desactivada por incumplimiento de normas.",
+                            "error": "Su contraseña ha caducado.",
                             "tipo_mensaje": "error",
                         },
-                        status=status.HTTP_403_FORBIDDEN,
+                        status=403,
                     )
-                elif dias_transcurridos == 89:
-                    mensaje_adicional = (
-                        "Debe cambiar su contraseña de forma obligatoria. Día 89."
-                    )
-                    requiere_cambio_password = True
-                    tipo_mensaje = "advertencia"
-                elif dias_transcurridos == 88:
-                    mensaje_adicional = (
-                        "Advertencia: su contraseña caducará pronto. Día 88."
-                    )
-                    tipo_mensaje = "advertencia"
             else:
                 mensaje_adicional = "Bienvenido, administrador. Acceso completo."
 
-            # ==============================
-            # Respuesta final con 2FA
-            # ==============================
+            # Generar token seguro simple
+            access_token = get_random_string(32)
+
             return Response(
                 {
                     "usuario_id": usuario.id,
@@ -269,31 +245,8 @@ class LoginView(APIView):
                     "tipo_mensaje": tipo_mensaje,
                     "dias_transcurridos": dias_transcurridos,
                     "requiere_cambio_password": requiere_cambio_password,
-                    "mensaje_urgente": mensaje_urgente,
                 },
-                status=status.HTTP_200_OK,
-            )
-
-        except Usuario.DoesNotExist:
-            try:
-                Atacante.objects.create(
-                    ip=request.META.get("REMOTE_ADDR"),
-                    tipos="Usuario no encontrado",
-                    descripcion="Intento de login con correo inexistente",
-                    payload=json.dumps(request.data),
-                    user_agent=request.META.get("HTTP_USER_AGENT", ""),
-                    bloqueado=True,
-                    fecha=timezone.now(),
-                )
-                print("[LoginView] Ataque registrado: usuario no encontrado")
-            except Exception as e:
-                import traceback
-
-                print(
-                    f"LoginView Crash: {type(e).__name__}: {str(e)}\n{traceback.format_exc()}"
-                )
-            return Response(
-                {"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND
+                status=200,
             )
 
         except Exception as e:
@@ -302,10 +255,7 @@ class LoginView(APIView):
             print(
                 f"[LoginView] Error interno: {type(e).__name__}: {str(e)}\n{traceback.format_exc()}"
             )
-            return Response(
-                {"error": "Error interno del servidor"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+            return Response({"error": "Error interno del servidor"}, status=500)
 
 
 class Verificar2FAView(APIView):
@@ -313,60 +263,58 @@ class Verificar2FAView(APIView):
     permission_classes = []
 
     def post(self, request):
-        usuario_id = request.data.get("usuario_id")
-        codigo = request.data.get("codigo")
-        metodo = request.data.get(
-            "metodo"
-        )  # ← MODIFICADO: Recibe 'metodo' del frontend ("correo" o "totp")
-
         try:
-            usuario = Usuario.objects.get(id=usuario_id)
-        except Usuario.DoesNotExist:
-            return Response({"error": "Usuario no encontrado"}, status=404)
+            usuario_id = request.data.get("usuario_id")
+            codigo = request.data.get("codigo")
+            metodo = request.data.get("metodo")
 
-        if not metodo or metodo not in ["correo", "totp"]:
-            return Response(
-                {"error": "Método 2FA inválido"}, status=400
-            )  # ← MODIFICADO: Valida metodo
+            usuario = Usuario.objects.filter(id=usuario_id).first()
+            if not usuario:
+                return Response({"error": "Usuario no encontrado"}, status=404)
 
-        # ← MODIFICADO: Verificar según 'metodo' elegido (no tipo_2fa fijo)
-        if metodo == "correo":
-            codigo_obj = (
-                Codigo2FA.objects.filter(usuario=usuario, codigo=codigo, expirado=False)
-                .order_by("-creado_en")
-                .first()
-            )
-            if not codigo_obj or not codigo_obj.es_valido():
-                return Response({"error": "Código inválido o caducado"}, status=400)
-            codigo_obj.expirado = True
-            codigo_obj.save()
+            if metodo not in ["correo", "totp"]:
+                return Response({"error": "Método 2FA inválido"}, status=400)
 
-        elif metodo == "totp":
-            if not usuario.secret_2fa:
-                return Response(
-                    {"error": "Usuario no configurado para TOTP"}, status=400
+            if metodo == "correo":
+                codigo_obj = (
+                    Codigo2FA.objects.filter(
+                        usuario=usuario, codigo=codigo, expirado=False
+                    )
+                    .order_by("-creado_en")
+                    .first()
                 )
+                if not codigo_obj or not codigo_obj.es_valido():
+                    return Response({"error": "Código inválido o caducado"}, status=400)
+                codigo_obj.expirado = True
+                codigo_obj.save()
 
-            if not usuario.verificar_codigo_totp(codigo):
-                return Response({"error": "Código TOTP incorrecto"}, status=400)
+            elif metodo == "totp":
+                if not usuario.secret_2fa:
+                    return Response(
+                        {"error": "Usuario no configurado para TOTP"}, status=400
+                    )
+                if not usuario.verificar_codigo_totp(codigo):
+                    return Response({"error": "Código TOTP incorrecto"}, status=400)
 
-        # Generar token JWT definitivo
-        refresh = RefreshToken.for_user(usuario)
-        access_token = str(refresh.access_token)
-        # Temporal: Token simple (hasta fixear model)
-        access_token = get_random_string(
-            32
-        )  # Placeholder – no seguro, pero evita crash
+            access_token = get_random_string(32)
 
-        return Response(
-            {
-                "access_token": access_token,
-                "usuario_id": usuario.id,
-                "roles": [ur.rol.nombre for ur in usuario.usuariorol_set.all()],
-                "mensaje": "Autenticación 2FA exitosa",
-            },
-            status=200,
-        )
+            return Response(
+                {
+                    "access_token": access_token,
+                    "usuario_id": usuario.id,
+                    "roles": [ur.rol.nombre for ur in usuario.usuariorol_set.all()],
+                    "mensaje": "Autenticación 2FA exitosa",
+                },
+                status=200,
+            )
+
+        except Exception as e:
+            import traceback
+
+            print(
+                f"[Verificar2FAView] Error interno: {type(e).__name__}: {str(e)}\n{traceback.format_exc()}"
+            )
+            return Response({"error": "Error interno del servidor"}, status=500)
 
 
 class GenerarQRView(APIView):  # ← NUEVO: Endpoint para generar QR al elegir TOTP
