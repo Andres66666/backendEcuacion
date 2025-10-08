@@ -211,9 +211,9 @@ cloudinary.config(
 # =====================================================
 
 CORS_ALLOWED_ORIGINS = [
+    "https://mallafinita.netlify.app",
     "http://localhost:4200",
     "http://127.0.0.1:4200",
-    "https://mallafinita.netlify.app",
 ]
 
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
