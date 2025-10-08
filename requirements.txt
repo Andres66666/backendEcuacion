@@ -12,7 +12,7 @@ python-decouple
 dj-database-url
 confection
 psycopg==3.1.18
-GuardianUnivalle-Benito-Yucra
+
 django-otp
 django-two-factor-auth
 pyotp==2.9.0
