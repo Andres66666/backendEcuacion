@@ -20,11 +20,15 @@ ALLOWED_HOSTS = [
     "192.168.0.4",
     "127.0.0.1",
     "localhost",
+    # Red asignada para pruebas Univalle
 ]
+
 APPEND_SLASH = True  # Redirige URLs sin barra final (opcional)
+
 # =====================================================
 # === 2. APLICACIONES INSTALADAS ======================
 # =====================================================
+
 INSTALLED_APPS = [
     # Django apps básicas
     "django.contrib.admin",
@@ -64,12 +68,6 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # Middlewares personalizados
-    # "GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware",
-    # "GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseMiddleware",
-    # "GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseMiddleware",
-    # "GuardianUnivalle_Benito_Yucra.detectores.detector_csrf.CSRFDefenseMiddleware",
-    # "GuardianUnivalle_Benito_Yucra.detectores.detector_keylogger.KEYLOGGERDefenseMiddleware",
-    # "users.middleware.AuditoriaMiddleware",
 ]
 
 
@@ -211,9 +209,9 @@ cloudinary.config(
 # =====================================================
 
 CORS_ALLOWED_ORIGINS = [
-    "https://mallafinita.netlify.app",
     "http://localhost:4200",
     "http://127.0.0.1:4200",
+    "https://mallafinita.netlify.app",
 ]
 
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
@@ -232,50 +230,6 @@ if not DEBUG:
     SECURE_HSTS_PRELOAD = True
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
-# =====================================================
-# === 13. DEFENSAS (SQLi y XSS) =======================
-# =====================================================
-
-# --- SQL Injection Defense ---
-SQLI_DEFENSE_TRUSTED_IPS = [
-    "127.0.0.1",
-    "192.168.0.4",
-]
-
-# --- XSS Defense ---
-XSS_DEFENSE_TRUSTED_IPS = [
-    "127.0.0.1",
-    "192.168.0.4",
-]
-XSS_DEFENSE_SANITIZE_INPUT = False
-XSS_DEFENSE_BLOCK = True
-XSS_DEFENSE_EXCLUDED_PATHS = ["/health", "/internal"]
-
-# --- CSRF Defense ---
-CSRF_DEFENSE_TRUSTED_IPS = [
-    "127.0.0.1",
-    "192.168.0.4",
-]
-
-CSRF_DEFENSE_BLOCK = True
-CSRF_DEFENSE_LOG = True
-# --- DoS Defense ---
-DOS_DEFENSE_MAX_REQUESTS = 100  # máximo requests por minuto
-DOS_DEFENSE_BLOCK_TIME = 300  # segundos para bloquear IP sospechosa
-DOS_DEFENSE_TRUSTED_IPS = [
-    "127.0.0.1",
-    "192.168.0.4",
-]
-# --- Keylogger Defense ---
-KEYLOGGER_PESO = 0.4  # peso en la fórmula de amenaza
-KEYLOGGER_SCAN_FOLDERS = [
-    "C:\\Users\\Public",
-    "C:\\Users\\%USERNAME%\\AppData\\Roaming",
-    "C:\\ProgramData",
-    "C:\\Windows\\Temp",
-]
-KEYLOGGER_EXTENSIONS = [".exe", ".dll", ".scr", ".bat", ".cmd", ".msi"]
-KEYLOGGER_PATTERNS = ["keylogger", "spy", "hook", "keyboard", "capture", "stealer"]
 
 # =====================================================
 # === 14. AUTO FIELD Y CONFIGURACIÓN FINAL ============
