@@ -20,15 +20,11 @@ ALLOWED_HOSTS = [
     "192.168.0.4",
     "127.0.0.1",
     "localhost",
-    # Red asignada para pruebas Univalle
 ]
-
 APPEND_SLASH = True  # Redirige URLs sin barra final (opcional)
-
 # =====================================================
 # === 2. APLICACIONES INSTALADAS ======================
 # =====================================================
-
 INSTALLED_APPS = [
     # Django apps básicas
     "django.contrib.admin",
@@ -105,7 +101,7 @@ WSGI_APPLICATION = "main.wsgi.application"
 # === 5. BASE DE DATOS ================================
 # =====================================================
 
-DATABASES = {
+""" DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": "Ecuacion",
@@ -114,8 +110,19 @@ DATABASES = {
         "HOST": "localhost",
         "PORT": "5432",
     }
+} """
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("DB_NAME", "ecuacion_wtpx"),
+        "USER": os.getenv("DB_USER", "ecuacion_wtpx_user"),
+        "PASSWORD": os.getenv("DB_PASSWORD", "hHSiKOLZtIxbxmvw3W9MWADpB2x7xBjR"),
+        "HOST": os.getenv(
+            "DB_HOST", "dpg-d3i6ttre5dus738shkig-a.oregon-postgres.render.com"
+        ),
+        "PORT": os.getenv("DB_PORT", "5432"),
+    }
 }
-
 # =====================================================
 # === 6. CONFIGURACIÓN DE AUTH Y PASSWORDS ============
 # =====================================================

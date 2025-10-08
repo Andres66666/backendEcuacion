@@ -22,11 +22,13 @@ git remote add origin https://github.com/Andres66666/backendEcuacion.git
 git push -u origin main
 
 
+git config --global user.name "Andrés66666"
+git config --global user.email "cya2024773@est.univalle.edu"
 
 git init
 git status
 git add .
-git commit -m "Primer commit DB"
+git commit -m "Primer lib"
 git remote add origin https://github.com/Andres66666/GuardianUnivalle-Benito-Yucra.git
 git push -u origin main
 
