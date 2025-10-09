@@ -68,22 +68,16 @@ INSTALLED_APPS = [
 # === 3. MIDDLEWARES ==================================
 # =====================================================
 
-
 MIDDLEWARE = [
-    # Seguridad y CORS
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
-    # Sesión y requests
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
-    # Autenticación
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django_otp.middleware.OTPMiddleware",
-    # Mensajes y UI
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    # Middlewares personalizados
 ]
 
 
