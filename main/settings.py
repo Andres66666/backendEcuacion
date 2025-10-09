@@ -30,7 +30,7 @@ if "127.0.0.1" not in ALLOWED_HOSTS:
 if DEBUG:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 else:
-    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 
 APPEND_SLASH = True
 
