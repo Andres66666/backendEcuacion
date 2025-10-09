@@ -26,27 +26,32 @@ DEBUG = ENVIRONMENT == "development"
 # =====================================================
 # 3. HOSTS Y CORS SEGÚN ENTORNO
 # =====================================================
-if DEBUG:
-    ALLOWED_HOSTS = ["localhost", "127.0.0.1", "192.168.0.4"]
-    CORS_ALLOWED_ORIGINS = [
-        "http://localhost:4200",
-        "http://127.0.0.1:4200",
-    ]
-else:
-    ALLOWED_HOSTS = ["backendecuacion.onrender.com"]
-    CORS_ALLOWED_ORIGINS = [
-        "https://mallafinita.netlify.app",
-    ]
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    "192.168.0.4",
+    "backendecuacion.onrender.com",
+]
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:4200",
+    "http://127.0.0.1:4200",
+    "https://mallafinita.netlify.app",
+]
+
+# También permite orígenes adicionales en caso de subdominios o redirecciones
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.netlify\.app$",
+]
 
 CSRF_TRUSTED_ORIGINS = [
-    *CORS_ALLOWED_ORIGINS,
+    "https://mallafinita.netlify.app",
     "https://backendecuacion.onrender.com",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_HEADERS = True
 CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
-APPEND_SLASH = True
 
 # =====================================================
 # 4. APLICACIONES INSTALADAS
