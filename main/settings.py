@@ -68,18 +68,28 @@ INSTALLED_APPS = [
 # === 3. MIDDLEWARES ==================================
 # =====================================================
 
+
 MIDDLEWARE = [
+    # Seguridad y CORS
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    # Sesión y requests
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
-    "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "django.contrib.messages.middleware.MessageMiddleware",
-    "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # Autenticación
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django_otp.middleware.OTPMiddleware",
     # Mensajes y UI
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # Middlewares personalizados
+    "GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware",
+    "GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseMiddleware",
+    "GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseMiddleware",
+    "GuardianUnivalle_Benito_Yucra.detectores.detector_csrf.CSRFDefenseMiddleware",
+    # "GuardianUnivalle_Benito_Yucra.detectores.detector_keylogger.KEYLOGGERDefenseMiddleware",
+    "users.middleware.AuditoriaMiddleware",
 ]
 
 
@@ -111,8 +121,6 @@ WSGI_APPLICATION = "main.wsgi.application"
 # === 5. BASE DE DATOS ================================
 # =====================================================
 
-# El uso de os.getenv con valores por defecto está bien,
-# pero asegúrate de que estas variables de entorno están en Render.
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -152,7 +160,6 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
-    # Solo si usas DRF Spectacular
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
@@ -179,9 +186,8 @@ EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-# Se recomienda usar os.getenv/config para las credenciales
 EMAIL_HOST_USER = "benitoandrescalle035@gmail.com"
-EMAIL_HOST_PASSWORD = "hmczrcgooenggoms"  # sin espacios
+EMAIL_HOST_PASSWORD = "hmczrcgooenggoms"
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 # =====================================================
@@ -203,9 +209,6 @@ CLOUDINARY_STORAGE = {
     "API_SECRET": os.getenv("CLOUDINARY_API_SECRET", "-uWh6mQnL_5dUgI3LIE0rRYxVfI"),
     "SECURE": True,
 }
-
-# La llamada a cloudinary.config ya no es estrictamente necesaria si usas CLOUDINARY_STORAGE
-# Pero si la mantienes, asegúrate de que usa la variable 'secure' en True.
 cloudinary.config(
     cloud_name=CLOUDINARY_STORAGE["CLOUD_NAME"],
     api_key=CLOUDINARY_STORAGE["API_KEY"],
