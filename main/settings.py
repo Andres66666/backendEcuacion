@@ -12,24 +12,16 @@ import cloudinary
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Se carga desde el entorno de Render (o usa valor por defecto solo para DEV)
-SECRET_KEY = config(
-    "SECRET_KEY",
-    default="django-insecure-(fn$sd-g@*)51f7)nc!a^3xeb(ma^9f6pm02_a+2h6tw^251fq",
-)
-# Se carga desde el entorno de Render, y se convierte a booleano. ¡Clave para Prod!
-DEBUG = config("DEBUG", default=False, cast=bool)
+SECRET_KEY = "django-insecure-(fn$sd-g@*)51f7)nc!a^3xeb(ma^9f6pm02_a+2h6tw^251fq"
+DEBUG = True
 
-# Usamos ALLOWED_HOSTS dinámico según el modo DEBUG (como en tu ejemplo funcional)
-if DEBUG:
-    ALLOWED_HOSTS = ["*"]  # Permite todo en desarrollo local
-else:
-    # Solo el dominio de Render para producción
-    ALLOWED_HOSTS = [
-        "backendecuacion-1.onrender.com",
-        "127.0.0.1",
-        "localhost",
-    ]
+ALLOWED_HOSTS = [
+    "backendecuacion.onrender.com",
+    "192.168.0.4",
+    "127.0.0.1",
+    "localhost",
+    # Red asignada para pruebas Univalle
+]
 
 APPEND_SLASH = True
 
