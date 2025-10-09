@@ -14,14 +14,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Clave secreta (debe estar en entorno para producción)
 SECRET_KEY = "django-insecure-(fn$sd-g@*)51f7)nc!a^3xeb(ma^9f6pm02_a+2h6tw^251fq"
 # Debug
-DEBUG = True
-ALLOWED_HOSTS = [
-    "backendecuacion.onrender.com",
-    "192.168.0.4",
-    "127.0.0.1",
-    "localhost",
-    # Red asignada para pruebas Univalle
-]
+DEBUG = config("DEBUG", default=True, cast=bool)  # Default True para desarrollo local
+
+# Hosts permitidos
+if DEBUG:
+    ALLOWED_HOSTS = ["localhost", "127.0.0.1"]  # Desarrollo local
+else:
+    # Producción
+    ALLOWED_HOSTS = ["backendecuacion.onrender.com"]  # Tu dominio en Render u otro hosting
+    # Si quieres agregar otros dominios en producción:
+    # ALLOWED_HOSTS += ["www.otrodominio.com"]
+
 APPEND_SLASH = True
 
 # =====================================================
