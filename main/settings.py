@@ -12,24 +12,16 @@ import cloudinary
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Clave secreta (debe estar en entorno para producción)
-SECRET_KEY = config(
-    "SECRET_KEY",
-    default="django-insecure-(fn$sd-g@*)51f7)nc!a^3xeb(ma^9f6pm02_a+2h6tw^251fq",
-)
-
+SECRET_KEY = "django-insecure-(fn$sd-g@*)51f7)nc!a^3xeb(ma^9f6pm02_a+2h6tw^251fq"
 # Debug
-DEBUG = config("DEBUG", default=False, cast=bool)
-
-# Hosts permitidos
-if DEBUG:
-    ALLOWED_HOSTS = ["*"]  # Desarrollo
-else:
-    ALLOWED_HOSTS = ["backendecuacion.onrender.com"]  # Producción
-    # Añadir hosts locales si no existen
-    for host in ["127.0.0.1", "localhost"]:
-        if host not in ALLOWED_HOSTS:
-            ALLOWED_HOSTS.append(host)
-
+DEBUG = True
+ALLOWED_HOSTS = [
+    "backendecuacion.onrender.com",
+    "192.168.0.4",
+    "127.0.0.1",
+    "localhost",
+    # Red asignada para pruebas Univalle
+]
 APPEND_SLASH = True
 
 # =====================================================
@@ -105,13 +97,11 @@ DATABASES = {
         "USER": os.getenv("DB_USER", "ecuacion_wtpx_user"),
         "PASSWORD": os.getenv("DB_PASSWORD", "hHSiKOLZtIxbxmvw3W9MWADpB2x7xBjR"),
         "HOST": os.getenv(
-            "DB_HOST",
-            "dpg-d3i6ttre5dus738shkig-a.oregon-postgres.render.com",
+            "DB_HOST", "dpg-d3i6ttre5dus738shkig-a.oregon-postgres.render.com"
         ),
         "PORT": os.getenv("DB_PORT", "5432"),
     }
 }
-
 # =====================================================
 # 6. CONFIGURACIÓN DE AUTH Y PASSWORDS
 # =====================================================
@@ -191,10 +181,11 @@ cloudinary.config(
 # 11. CORS Y CSRF
 # =====================================================
 CORS_ALLOWED_ORIGINS = [
-    "https://mallafinita.netlify.app",
-    "https://backendecuacion.onrender.com",
+
     "http://localhost:4200",
     "http://127.0.0.1:4200",
+    "https://mallafinita.netlify.app",
+
 ]
 
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
