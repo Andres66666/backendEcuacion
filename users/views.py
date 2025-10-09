@@ -67,6 +67,7 @@ import base64
 from django.utils.crypto import get_random_string
 import uuid
 from datetime import timedelta
+import traceback
 
 # =====================================================
 # === =============  seccion 1   === ==================
@@ -351,26 +352,32 @@ class Verificar2FAView(APIView):
         )
 
 
-class GenerarQRView(APIView):  # ← NUEVO: Endpoint para generar QR al elegir TOTP
+class GenerarQRView(APIView):
     authentication_classes = []
     permission_classes = []
 
     def post(self, request):
         usuario_id = request.data.get("usuario_id")
+
         try:
             usuario = Usuario.objects.get(id=usuario_id)
         except Usuario.DoesNotExist:
             return Response({"error": "Usuario no encontrado"}, status=404)
-        # Generar secreto si no existe
-        usuario.generar_secret_2fa()
-        qr_base64 = usuario.generar_qr_authenticator()
-        return Response(
-            {
-                "qr_base64": qr_base64,
-                "mensaje": "Escanee este código QR con Google Authenticator.",
-            },
-            status=200,
-        )
+
+        try:
+            usuario.generar_secret_2fa()
+            qr_base64 = usuario.generar_qr_authenticator()
+            return Response(
+                {
+                    "qr_base64": qr_base64,
+                    "mensaje": "Escanee este código QR con Google Authenticator.",
+                },
+                status=200,
+            )
+        except Exception as e:
+            print("🧨 ERROR EN GENERAR QR:")
+            print(traceback.format_exc())
+            return Response({"error": str(e)}, status=500)
 
 
 class EnviarCodigoCorreoView(APIView):
