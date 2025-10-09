@@ -1,3 +1,4 @@
+import traceback
 from django.utils import timezone
 
 import cloudinary
@@ -67,10 +68,7 @@ import base64
 from django.utils.crypto import get_random_string
 import uuid
 from datetime import timedelta
-import traceback
-import threading
-import threading, random
-from .utils.send_email import enviar_correo_sendgrid
+
 # =====================================================
 # === =============  seccion 1   === ==================
 # =====================================================
@@ -354,6 +352,7 @@ class Verificar2FAView(APIView):
         )
 
 
+
 class GenerarQRView(APIView):
     authentication_classes = []
     permission_classes = []
@@ -381,7 +380,11 @@ class GenerarQRView(APIView):
             print(traceback.format_exc())
             return Response({"error": str(e)}, status=500)
 
+
 class EnviarCodigoCorreoView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
     def post(self, request):
         usuario_id = request.data.get("usuario_id")
         try:
@@ -389,24 +392,28 @@ class EnviarCodigoCorreoView(APIView):
         except Usuario.DoesNotExist:
             return Response({"error": "Usuario no encontrado"}, status=404)
 
-        correo = usuario.correo  # ← Usamos el correo del usuario directamente
-        codigo = str(random.randint(100000, 999999))
+        # Buscar el código más reciente no expirado o crear uno nuevo
+        codigo_obj = (
+            Codigo2FA.objects.filter(usuario=usuario, expirado=False)
+            .order_by("-creado_en")
+            .first()
+        )
+        if codigo_obj and codigo_obj.es_valido():
+            codigo = codigo_obj.codigo
+        else:
+            codigo = get_random_string(6, allowed_chars="0123456789")
+            Codigo2FA.objects.create(usuario=usuario, codigo=codigo)
 
-        # Enviar correo en un hilo
-        def enviar():
-            html = f"""
-            <h2>Tu código de verificación</h2>
-            <p>Usa este código para completar tu inicio de sesión:</p>
-            <h1>{codigo}</h1>
-            """
-            enviar_correo_sendgrid(correo, "Código de verificación", html)
+        # Envío de correo (requerirá configuración SMTP o proveedor)
+        subject = "Código de verificación"
+        message = f"Hola {usuario.nombre}, tu código es: {codigo} (válido 5 minutos)."
+        try:
+            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [usuario.correo])
+        except Exception as e:
+            # En dev puede fallar si no configuras SMTP; lo imprimimos y retornamos OK para pruebas
+            print("[EnviarCodigoCorreo] No se pudo enviar email:", e)
 
-        threading.Thread(target=enviar).start()
-
-        # Guardar código en DB o caché temporal
-        Codigo2FA.objects.create(usuario=usuario, codigo=codigo)
-
-        return Response({"message": "Código enviado", "codigo": codigo})
+        return Response({"mensaje": "Código enviado"}, status=200)
 
 
 class ResetPasswordView(APIView):

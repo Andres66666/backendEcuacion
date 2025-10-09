@@ -18,4 +18,3 @@ django-two-factor-auth
 pyotp==2.9.0
 qrcode[pil]
 Pillow
-sendgrid==6.11.0

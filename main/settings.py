@@ -1,3 +1,4 @@
+"""Django settings for main project (backendecuacion)."""
 
 from pathlib import Path
 from datetime import timedelta
@@ -6,37 +7,34 @@ from decouple import config
 import cloudinary
 
 # =====================================================
-# === 1. RUTAS BASE Y CLAVES DE SEGURIDAD ============
+# 1. RUTAS BASE Y CLAVES DE SEGURIDAD
 # =====================================================
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Clave secreta (debe estar en entorno para producción)
 SECRET_KEY = config(
     "SECRET_KEY",
     default="django-insecure-(fn$sd-g@*)51f7)nc!a^3xeb(ma^9f6pm02_a+2h6tw^251fq",
 )
+
+# Debug
 DEBUG = config("DEBUG", default=False, cast=bool)
 
+# Hosts permitidos
 if DEBUG:
-    ALLOWED_HOSTS = ["*"]
+    ALLOWED_HOSTS = ["*"]  # Desarrollo
 else:
-    ALLOWED_HOSTS = [
-        "backendecuacion.onrender.com",
-    ]
-
-if "127.0.0.1" not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.extend(["127.0.0.1", "localhost"])
-if DEBUG:
-    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-else:
-    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    ALLOWED_HOSTS = ["backendecuacion.onrender.com"]  # Producción
+    # Añadir hosts locales si no existen
+    for host in ["127.0.0.1", "localhost"]:
+        if host not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(host)
 
 APPEND_SLASH = True
 
 # =====================================================
-# === 2. APLICACIONES INSTALADAS ======================
+# 2. APLICACIONES INSTALADAS
 # =====================================================
-
 INSTALLED_APPS = [
     # Django apps básicas
     "django.contrib.admin",
@@ -45,23 +43,23 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+
     # Librerías externas
     "corsheaders",
     "rest_framework",
     "rest_framework_simplejwt",
     "django_otp",
-    "django_otp.plugins.otp_static",  # Códigos de respaldo
-    "django_otp.plugins.otp_totp",  # Autenticador TOTP
+    "django_otp.plugins.otp_static",
+    "django_otp.plugins.otp_totp",
     "two_factor",
+
     # Aplicaciones locales
     "users",
 ]
 
-
 # =====================================================
-# === 3. MIDDLEWARES ==================================
+# 3. MIDDLEWARES
 # =====================================================
-
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
@@ -74,11 +72,9 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-
 # =====================================================
-# === 4. URLS, TEMPLATES Y APLICACIÓN WSGI ============
+# 4. URLS, TEMPLATES Y WSGI
 # =====================================================
-
 ROOT_URLCONF = "main.urls"
 
 TEMPLATES = [
@@ -100,9 +96,8 @@ TEMPLATES = [
 WSGI_APPLICATION = "main.wsgi.application"
 
 # =====================================================
-# === 5. BASE DE DATOS ================================
+# 5. BASE DE DATOS
 # =====================================================
-
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -110,31 +105,29 @@ DATABASES = {
         "USER": os.getenv("DB_USER", "ecuacion_wtpx_user"),
         "PASSWORD": os.getenv("DB_PASSWORD", "hHSiKOLZtIxbxmvw3W9MWADpB2x7xBjR"),
         "HOST": os.getenv(
-            "DB_HOST", "dpg-d3i6ttre5dus738shkig-a.oregon-postgres.render.com"
+            "DB_HOST",
+            "dpg-d3i6ttre5dus738shkig-a.oregon-postgres.render.com",
         ),
         "PORT": os.getenv("DB_PORT", "5432"),
     }
 }
-# =====================================================
-# === 6. CONFIGURACIÓN DE AUTH Y PASSWORDS ============
-# =====================================================
 
+# =====================================================
+# 6. CONFIGURACIÓN DE AUTH Y PASSWORDS
+# =====================================================
 LOGIN_URL = "two_factor:login"
 LOGIN_REDIRECT_URL = "two_factor:profile"
 
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
-    },
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
 # =====================================================
-# === 7. CONFIGURACIÓN DE DRF Y JWT ===================
+# 7. CONFIGURACIÓN DE DRF Y JWT
 # =====================================================
-
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.AllowAny",
@@ -152,18 +145,16 @@ SIMPLE_JWT = {
 }
 
 # =====================================================
-# === 8. INTERNACIONALIZACIÓN =========================
+# 8. INTERNACIONALIZACIÓN
 # =====================================================
-
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
 # =====================================================
-# === 9. CONFIGURACIÓN DE EMAIL =======================
+# 9. CONFIGURACIÓN DE EMAIL
 # =====================================================
-
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
@@ -172,21 +163,14 @@ EMAIL_HOST_USER = "benitoandrescalle035@gmail.com"
 EMAIL_HOST_PASSWORD = "hmczrcgooenggoms"
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
-# settings.py
-SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "no-reply@mallafinitasrl.com")
-EMAIL_BACKEND = "sendgrid_backend.SendgridBackend"  # Esto si quieres enviar directamente por SendGrid
-
 # =====================================================
-# === 10. ARCHIVOS ESTÁTICOS Y MULTIMEDIA ============
+# 10. ARCHIVOS ESTÁTICOS Y MULTIMEDIA
 # =====================================================
-
 STATIC_URL = "/static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 MEDIA_URL = "/media/"
-
 DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
 
 CLOUDINARY_STORAGE = {
@@ -195,16 +179,17 @@ CLOUDINARY_STORAGE = {
     "API_SECRET": os.getenv("CLOUDINARY_API_SECRET", "-uWh6mQnL_5dUgI3LIE0rRYxVfI"),
     "SECURE": True,
 }
+
 cloudinary.config(
     cloud_name="dexggkhkd",
     api_key="896862494571978",
     api_secret="-uWh6mQnL_5dUgI3LIE0rRYxVfI",
     secure=True,
 )
-# =====================================================
-# === 11. CORS Y CSRF ================================
-# =====================================================
 
+# =====================================================
+# 11. CORS Y CSRF
+# =====================================================
 CORS_ALLOWED_ORIGINS = [
     "https://mallafinita.netlify.app",
     "https://backendecuacion.onrender.com",
@@ -212,17 +197,14 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:4200",
 ]
 
+CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_HEADERS = True
 CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
-CSRF_TRUSTED_ORIGINS = [
-    "https://mallafinita.netlify.app",
-    "https://backendecuacion.onrender.com",
-]
-# =====================================================
-# === 12. SEGURIDAD EN PRODUCCIÓN =====================
-# =====================================================
 
+# =====================================================
+# 12. SEGURIDAD EN PRODUCCIÓN
+# =====================================================
 if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
@@ -232,9 +214,7 @@ if not DEBUG:
     SECURE_HSTS_PRELOAD = True
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
-
 # =====================================================
-# === 14. AUTO FIELD Y CONFIGURACIÓN FINAL ============
+# 13. AUTO FIELD Y CONFIGURACIÓN FINAL
 # =====================================================
-
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
