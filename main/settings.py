@@ -13,25 +13,22 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Clave secreta (debe estar en entorno para producción)
 SECRET_KEY = "django-insecure-(fn$sd-g@*)51f7)nc!a^3xeb(ma^9f6pm02_a+2h6tw^251fq"
+ENVIRONMENT = config("ENVIRONMENT", default="development")  # o "production"
 
-# Debug
-DEBUG = config("DEBUG", default=True, cast=bool)
-
-# Hosts permitidos
-if DEBUG:
-    # Desarrollo local
-    ALLOWED_HOSTS = [
-        "localhost",
-        "127.0.0.1",
-        "192.168.0.4",  # IP de tu red local para pruebas
-        # Puedes agregar más IPs locales si las necesitas
+if ENVIRONMENT == "development":
+    DEBUG = True
+    ALLOWED_HOSTS = ["localhost", "127.0.0.1", "192.168.0.4"]
+    CORS_ALLOWED_ORIGINS = [
+        "http://localhost:4200",
+        "http://127.0.0.1:4200",
     ]
 else:
-    # Producción
-    ALLOWED_HOSTS = [
-        "backendecuacion.onrender.com",
-        # Puedes agregar aquí más dominios de producción
+    DEBUG = False
+    ALLOWED_HOSTS = ["backendecuacion.onrender.com"]
+    CORS_ALLOWED_ORIGINS = [
+        "https://mallafinita.netlify.app",
     ]
+
 APPEND_SLASH = True
 
 # =====================================================
