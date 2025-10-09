@@ -75,6 +75,11 @@ from datetime import timedelta
 """ hasta aqui funciona el codigo correo  """
 
 
+class AtacanteViewSet(viewsets.ModelViewSet):
+    queryset = Atacante.objects.all().order_by("-fecha")
+    serializer_class = AtacanteSerializer
+
+
 class LoginView(APIView):
     authentication_classes = []
     permission_classes = []
@@ -289,11 +294,9 @@ class LoginView(APIView):
                 print("[LoginView] Ataque registrado: usuario no encontrado")
             except Exception as e:
                 print("Error guardando ataque:", e)
-            except Exception as e:
-                print("[LoginView] Error inesperado:", e)
-                return Response(
-                    {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
+            return Response(
+                {"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND
+            )
 
 
 class Verificar2FAView(APIView):
@@ -795,11 +798,6 @@ class RolPermisoViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
-
-
-class AtacanteViewSet(viewsets.ModelViewSet):
-    queryset = Atacante.objects.all().order_by("-fecha")
-    serializer_class = AtacanteSerializer
 
 
 # =====================================================

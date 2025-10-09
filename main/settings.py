@@ -27,13 +27,9 @@ else:
     # Solo el dominio de Render para producción
     ALLOWED_HOSTS = [
         "backendecuacion-1.onrender.com",
+        "127.0.0.1",
+        "localhost",
     ]
-
-# Añadimos hosts locales si no estamos en producción forzada
-if "127.0.0.1" not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.extend(["127.0.0.1", "localhost"])
-
-# Nota: Eliminé la IP "192.168.0.4" ya que no es necesaria en un despliegue cloud.
 
 APPEND_SLASH = True
 
@@ -50,19 +46,17 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     # Librerías externas
-    "cloudinary",
     "corsheaders",
     "rest_framework",
     "rest_framework_simplejwt",
-    # Módulos 2FA
     "django_otp",
-    "django_otp.plugins.otp_static",
-    "django_otp.plugins.otp_totp",
+    "django_otp.plugins.otp_static",  # Códigos de respaldo
+    "django_otp.plugins.otp_totp",  # Autenticador TOTP
     "two_factor",
-    # Almacenamiento
     # Aplicaciones locales
     "users",
 ]
+
 
 # =====================================================
 # === 3. MIDDLEWARES ==================================
@@ -175,7 +169,7 @@ EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = "benitoandrescalle035@gmail.com"
-EMAIL_HOST_PASSWORD = "hmczrcgooenggoms"
+EMAIL_HOST_PASSWORD = "hmczrcgooenggoms"  # sin espacios
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 # =====================================================
@@ -184,7 +178,6 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 STATIC_URL = "/static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
-# Asegúrate de usar Whitenoise de la forma correcta
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 MEDIA_URL = "/media/"
@@ -198,12 +191,11 @@ CLOUDINARY_STORAGE = {
     "SECURE": True,
 }
 cloudinary.config(
-    cloud_name=CLOUDINARY_STORAGE["CLOUD_NAME"],
-    api_key=CLOUDINARY_STORAGE["API_KEY"],
-    api_secret=CLOUDINARY_STORAGE["API_SECRET"],
+    cloud_name="dexggkhkd",
+    api_key="896862494571978",
+    api_secret="-uWh6mQnL_5dUgI3LIE0rRYxVfI",
     secure=True,
 )
-
 # =====================================================
 # === 11. CORS Y CSRF ================================
 # =====================================================
