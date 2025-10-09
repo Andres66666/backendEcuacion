@@ -172,9 +172,10 @@ EMAIL_HOST_USER = "benitoandrescalle035@gmail.com"
 EMAIL_HOST_PASSWORD = "hmczrcgooenggoms"
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
+# settings.py
 SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "no-reply@mallafinitasrl.com")
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend" 
+EMAIL_BACKEND = "sendgrid_backend.SendgridBackend"  # Esto si quieres enviar directamente por SendGrid
 
 # =====================================================
 # === 10. ARCHIVOS ESTÁTICOS Y MULTIMEDIA ============
