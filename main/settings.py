@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     # Librerías externas
+    "cloudinary",
     "corsheaders",
     "rest_framework",
     "rest_framework_simplejwt",
@@ -59,7 +60,6 @@ INSTALLED_APPS = [
     "django_otp.plugins.otp_totp",
     "two_factor",
     # Almacenamiento
-    "cloudinary_storage",  # <--- AÑADIDO: Módulo para Cloudinary Storage
     # Aplicaciones locales
     "users",
 ]
