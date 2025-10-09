@@ -1,4 +1,3 @@
-"""Django settings for main project (backendecuacion)."""
 
 from pathlib import Path
 from datetime import timedelta
