@@ -12,27 +12,44 @@ import cloudinary
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Clave secreta (debe estar en entorno para producción)
-SECRET_KEY = "django-insecure-(fn$sd-g@*)51f7)nc!a^3xeb(ma^9f6pm02_a+2h6tw^251fq"
-ENVIRONMENT = config("ENVIRONMENT", default="development")  # o "production"
+SECRET_KEY = config(
+    "SECRET_KEY",
+    default="django-insecure-(fn$sd-g@*)51f7)nc!a^3xeb(ma^9f6pm02_a+2h6tw^251fq"
+)
 
-if ENVIRONMENT == "development":
-    DEBUG = True
+# =====================================================
+# 2. ENTORNO Y DEBUG AUTOMÁTICO
+# =====================================================
+ENVIRONMENT = config("ENVIRONMENT", default="development")  # 'development' o 'production'
+DEBUG = ENVIRONMENT == "development"
+
+# =====================================================
+# 3. HOSTS Y CORS SEGÚN ENTORNO
+# =====================================================
+if DEBUG:
     ALLOWED_HOSTS = ["localhost", "127.0.0.1", "192.168.0.4"]
     CORS_ALLOWED_ORIGINS = [
         "http://localhost:4200",
         "http://127.0.0.1:4200",
     ]
 else:
-    DEBUG = False
     ALLOWED_HOSTS = ["backendecuacion.onrender.com"]
     CORS_ALLOWED_ORIGINS = [
         "https://mallafinita.netlify.app",
     ]
 
+CSRF_TRUSTED_ORIGINS = [
+    *CORS_ALLOWED_ORIGINS,
+    "https://backendecuacion.onrender.com",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_HEADERS = True
+CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
 APPEND_SLASH = True
 
 # =====================================================
-# 2. APLICACIONES INSTALADAS
+# 4. APLICACIONES INSTALADAS
 # =====================================================
 INSTALLED_APPS = [
     # Django apps básicas
@@ -57,7 +74,7 @@ INSTALLED_APPS = [
 ]
 
 # =====================================================
-# 3. MIDDLEWARES
+# 5. MIDDLEWARES
 # =====================================================
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
@@ -72,7 +89,7 @@ MIDDLEWARE = [
 ]
 
 # =====================================================
-# 4. URLS, TEMPLATES Y WSGI
+# 6. URLS, TEMPLATES Y WSGI
 # =====================================================
 ROOT_URLCONF = "main.urls"
 
@@ -95,7 +112,7 @@ TEMPLATES = [
 WSGI_APPLICATION = "main.wsgi.application"
 
 # =====================================================
-# 5. BASE DE DATOS
+# 7. BASE DE DATOS
 # =====================================================
 DATABASES = {
     "default": {
@@ -109,8 +126,9 @@ DATABASES = {
         "PORT": os.getenv("DB_PORT", "5432"),
     }
 }
+
 # =====================================================
-# 6. CONFIGURACIÓN DE AUTH Y PASSWORDS
+# 8. CONFIGURACIÓN DE AUTENTICACIÓN Y CONTRASEÑAS
 # =====================================================
 LOGIN_URL = "two_factor:login"
 LOGIN_REDIRECT_URL = "two_factor:profile"
@@ -123,7 +141,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # =====================================================
-# 7. CONFIGURACIÓN DE DRF Y JWT
+# 9. CONFIGURACIÓN DE DRF Y JWT
 # =====================================================
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
@@ -142,7 +160,7 @@ SIMPLE_JWT = {
 }
 
 # =====================================================
-# 8. INTERNACIONALIZACIÓN
+# 10. INTERNACIONALIZACIÓN
 # =====================================================
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
@@ -150,7 +168,7 @@ USE_I18N = True
 USE_TZ = True
 
 # =====================================================
-# 9. CONFIGURACIÓN DE EMAIL
+# 11. CONFIGURACIÓN DE EMAIL
 # =====================================================
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"
@@ -161,7 +179,7 @@ EMAIL_HOST_PASSWORD = "hmczrcgooenggoms"
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 # =====================================================
-# 10. ARCHIVOS ESTÁTICOS Y MULTIMEDIA
+# 12. ARCHIVOS ESTÁTICOS Y MULTIMEDIA
 # =====================================================
 STATIC_URL = "/static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
@@ -185,23 +203,7 @@ cloudinary.config(
 )
 
 # =====================================================
-# 11. CORS Y CSRF
-# =====================================================
-CORS_ALLOWED_ORIGINS = [
-
-    "http://localhost:4200",
-    "http://127.0.0.1:4200",
-    "https://mallafinita.netlify.app",
-    
-]
-
-CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_HEADERS = True
-CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
-
-# =====================================================
-# 12. SEGURIDAD EN PRODUCCIÓN
+# 13. SEGURIDAD EN PRODUCCIÓN
 # =====================================================
 if not DEBUG:
     SECURE_SSL_REDIRECT = True
@@ -213,6 +215,9 @@ if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # =====================================================
-# 13. AUTO FIELD Y CONFIGURACIÓN FINAL
+# 14. AUTO FIELD Y LOGS
 # =====================================================
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Mostrar entorno actual (útil para depurar)
+print(f"🔧 Entorno activo: {ENVIRONMENT} | DEBUG={DEBUG}")
