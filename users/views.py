@@ -386,12 +386,13 @@ class EnviarCodigoCorreoView(APIView):
 
     def post(self, request):
         usuario_id = request.data.get("usuario_id")
+
         try:
             usuario = Usuario.objects.get(id=usuario_id)
         except Usuario.DoesNotExist:
             return Response({"error": "Usuario no encontrado"}, status=404)
 
-        # Buscar el código más reciente no expirado o crear uno nuevo
+        # Buscar o crear código 2FA
         codigo_obj = (
             Codigo2FA.objects.filter(usuario=usuario, expirado=False)
             .order_by("-creado_en")
@@ -403,16 +404,23 @@ class EnviarCodigoCorreoView(APIView):
             codigo = get_random_string(6, allowed_chars="0123456789")
             Codigo2FA.objects.create(usuario=usuario, codigo=codigo)
 
-        # Envío de correo (requerirá configuración SMTP o proveedor)
+        # Envío de correo seguro
         subject = "Código de verificación"
         message = f"Hola {usuario.nombre}, tu código es: {codigo} (válido 5 minutos)."
-        try:
-            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [usuario.correo])
-        except Exception as e:
-            # En dev puede fallar si no configuras SMTP; lo imprimimos y retornamos OK para pruebas
-            print("[EnviarCodigoCorreo] No se pudo enviar email:", e)
 
-        return Response({"mensaje": "Código enviado"}, status=200)
+        try:
+            remitente = getattr(settings, "DEFAULT_FROM_EMAIL", "no-reply@ecuacion.com")
+            send_mail(
+                subject, message, remitente, [usuario.correo], fail_silently=False
+            )
+        except Exception as e:
+            print("🧨 Error al enviar correo:")
+            print(traceback.format_exc())
+            return Response(
+                {"error": "No se pudo enviar el correo", "detalle": str(e)}, status=500
+            )
+
+        return Response({"mensaje": "Código enviado correctamente"}, status=200)
 
 
 class ResetPasswordView(APIView):
