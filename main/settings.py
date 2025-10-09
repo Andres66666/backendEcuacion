@@ -180,8 +180,8 @@ EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 # Se recomienda usar os.getenv/config para las credenciales
-EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="benitoandrescalle035@gmail.com")
-EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="hmczrcgooenggoms")
+EMAIL_HOST_USER = "benitoandrescalle035@gmail.com"
+EMAIL_HOST_PASSWORD = "hmczrcgooenggoms"  # sin espacios
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 # =====================================================
