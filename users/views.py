@@ -68,6 +68,7 @@ from django.utils.crypto import get_random_string
 import uuid
 from datetime import timedelta
 import traceback
+import threading
 
 # =====================================================
 # === =============  seccion 1   === ==================
@@ -380,6 +381,15 @@ class GenerarQRView(APIView):
             return Response({"error": str(e)}, status=500)
 
 
+# Función para enviar correo en un hilo aparte
+def enviar_correo_async(subject, message, remitente, destinatario):
+    try:
+        send_mail(subject, message, remitente, [destinatario], fail_silently=False)
+    except Exception as e:
+        print("🧨 Error enviando correo en background:")
+        print(traceback.format_exc())
+
+
 class EnviarCodigoCorreoView(APIView):
     authentication_classes = []
     permission_classes = []
@@ -404,23 +414,25 @@ class EnviarCodigoCorreoView(APIView):
             codigo = get_random_string(6, allowed_chars="0123456789")
             Codigo2FA.objects.create(usuario=usuario, codigo=codigo)
 
-        # Envío de correo seguro
+        # Preparar correo
         subject = "Código de verificación"
         message = f"Hola {usuario.nombre}, tu código es: {codigo} (válido 5 minutos)."
+        remitente = getattr(settings, "DEFAULT_FROM_EMAIL", "no-reply@ecuacion.com")
 
-        try:
-            remitente = getattr(settings, "DEFAULT_FROM_EMAIL", "no-reply@ecuacion.com")
-            send_mail(
-                subject, message, remitente, [usuario.correo], fail_silently=False
-            )
-        except Exception as e:
-            print("🧨 Error al enviar correo:")
-            print(traceback.format_exc())
-            return Response(
-                {"error": "No se pudo enviar el correo", "detalle": str(e)}, status=500
-            )
+        # Enviar correo en background
+        threading.Thread(
+            target=enviar_correo_async,
+            args=(subject, message, remitente, usuario.correo),
+            daemon=True,  # No bloquea cierre de procesos
+        ).start()
 
-        return Response({"mensaje": "Código enviado correctamente"}, status=200)
+        # Respuesta inmediata al frontend
+        return Response(
+            {
+                "mensaje": "Código generado y correo enviado (si todo funciona correctamente)"
+            },
+            status=200,
+        )
 
 
 class ResetPasswordView(APIView):
