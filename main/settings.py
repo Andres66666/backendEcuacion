@@ -22,7 +22,7 @@ if DEBUG:
     ALLOWED_HOSTS = ["*"]
 else:
     ALLOWED_HOSTS = [
-        "backendecuacion-1.onrender.com",
+        "backendecuacion.onrender.com",
     ]
 
 if "127.0.0.1" not in ALLOWED_HOSTS:
@@ -207,7 +207,7 @@ cloudinary.config(
 
 CORS_ALLOWED_ORIGINS = [
     "https://mallafinita.netlify.app",
-    "https://backendecuacion-1.onrender.com",
+    "https://backendecuacion.onrender.com",
     "http://localhost:4200",
     "http://127.0.0.1:4200",
 ]
@@ -217,7 +217,7 @@ CORS_ALLOW_ALL_HEADERS = True
 CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
 CSRF_TRUSTED_ORIGINS = [
     "https://mallafinita.netlify.app",
-    "https://backendecuacion-1.onrender.com",
+    "https://backendecuacion.onrender.com",
 ]
 # =====================================================
 # === 12. SEGURIDAD EN PRODUCCIÓN =====================
