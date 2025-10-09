@@ -381,26 +381,18 @@ class GenerarQRView(APIView):
             print(traceback.format_exc())
             return Response({"error": str(e)}, status=500)
 
-
-# Función para enviar correo en un hilo aparte
-def enviar_correo_async(subject, message, remitente, destinatario):
-    try:
-        send_mail(subject, message, remitente, [destinatario], fail_silently=False)
-    except Exception as e:
-        print("🧨 Error enviando correo en background:")
-        print(traceback.format_exc())
-
-
-
 class EnviarCodigoCorreoView(APIView):
     def post(self, request):
-        correo = request.data.get("correo")
-        if not correo:
-            return Response({"error": "Correo no proporcionado"}, status=status.HTTP_400_BAD_REQUEST)
+        usuario_id = request.data.get("usuario_id")
+        try:
+            usuario = Usuario.objects.get(id=usuario_id)
+        except Usuario.DoesNotExist:
+            return Response({"error": "Usuario no encontrado"}, status=404)
 
+        correo = usuario.correo  # ← Usamos el correo del usuario directamente
         codigo = str(random.randint(100000, 999999))
 
-        # Enviar correo en un hilo (no bloquea el worker)
+        # Enviar correo en un hilo
         def enviar():
             html = f"""
             <h2>Tu código de verificación</h2>
@@ -411,8 +403,11 @@ class EnviarCodigoCorreoView(APIView):
 
         threading.Thread(target=enviar).start()
 
-        # Aquí puedes guardar el código temporalmente en BD o caché
+        # Guardar código en DB o caché temporal
+        Codigo2FA.objects.create(usuario=usuario, codigo=codigo)
+
         return Response({"message": "Código enviado", "codigo": codigo})
+
 
 class ResetPasswordView(APIView):
     authentication_classes = []
