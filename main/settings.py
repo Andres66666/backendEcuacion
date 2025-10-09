@@ -12,28 +12,25 @@ import cloudinary
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Se carga desde el entorno de Render (o usa valor por defecto solo para DEV)
 SECRET_KEY = config(
     "SECRET_KEY",
     default="django-insecure-(fn$sd-g@*)51f7)nc!a^3xeb(ma^9f6pm02_a+2h6tw^251fq",
 )
-# Se carga desde el entorno de Render, y se convierte a booleano. ¡Clave para Prod!
 DEBUG = config("DEBUG", default=False, cast=bool)
 
-# Usamos ALLOWED_HOSTS dinámico según el modo DEBUG (como en tu ejemplo funcional)
 if DEBUG:
-    ALLOWED_HOSTS = ["*"]  # Permite todo en desarrollo local
+    ALLOWED_HOSTS = ["*"]
 else:
-    # Solo el dominio de Render para producción
     ALLOWED_HOSTS = [
         "backendecuacion-1.onrender.com",
     ]
 
-# Añadimos hosts locales si no estamos en producción forzada
 if "127.0.0.1" not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.extend(["127.0.0.1", "localhost"])
-
-# Nota: Eliminé la IP "192.168.0.4" ya que no es necesaria en un despliegue cloud.
+if DEBUG:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 APPEND_SLASH = True
 
@@ -172,9 +169,10 @@ EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = "benitoandrescalle035@gmail.com"
-EMAIL_HOST_PASSWORD = "hmczrcgooenggoms"  # sin espacios
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
 
 # =====================================================
 # === 10. ARCHIVOS ESTÁTICOS Y MULTIMEDIA ============
@@ -205,10 +203,10 @@ cloudinary.config(
 # =====================================================
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:4200",
-    "http://127.0.0.1:4200",
     "https://mallafinita.netlify.app",
     "https://backendecuacion-1.onrender.com",
+    "http://localhost:4200",
+    "http://127.0.0.1:4200",
 ]
 
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
