@@ -69,7 +69,8 @@ import uuid
 from datetime import timedelta
 import traceback
 import threading
-
+import threading, random
+from .utils.send_email import enviar_correo_sendgrid
 # =====================================================
 # === =============  seccion 1   === ==================
 # =====================================================
@@ -390,50 +391,28 @@ def enviar_correo_async(subject, message, remitente, destinatario):
         print(traceback.format_exc())
 
 
+
 class EnviarCodigoCorreoView(APIView):
-    authentication_classes = []
-    permission_classes = []
-
     def post(self, request):
-        usuario_id = request.data.get("usuario_id")
+        correo = request.data.get("correo")
+        if not correo:
+            return Response({"error": "Correo no proporcionado"}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            usuario = Usuario.objects.get(id=usuario_id)
-        except Usuario.DoesNotExist:
-            return Response({"error": "Usuario no encontrado"}, status=404)
+        codigo = str(random.randint(100000, 999999))
 
-        # Buscar o crear código 2FA
-        codigo_obj = (
-            Codigo2FA.objects.filter(usuario=usuario, expirado=False)
-            .order_by("-creado_en")
-            .first()
-        )
-        if codigo_obj and codigo_obj.es_valido():
-            codigo = codigo_obj.codigo
-        else:
-            codigo = get_random_string(6, allowed_chars="0123456789")
-            Codigo2FA.objects.create(usuario=usuario, codigo=codigo)
+        # Enviar correo en un hilo (no bloquea el worker)
+        def enviar():
+            html = f"""
+            <h2>Tu código de verificación</h2>
+            <p>Usa este código para completar tu inicio de sesión:</p>
+            <h1>{codigo}</h1>
+            """
+            enviar_correo_sendgrid(correo, "Código de verificación", html)
 
-        # Preparar correo
-        subject = "Código de verificación"
-        message = f"Hola {usuario.nombre}, tu código es: {codigo} (válido 5 minutos)."
-        remitente = getattr(settings, "DEFAULT_FROM_EMAIL", "no-reply@ecuacion.com")
+        threading.Thread(target=enviar).start()
 
-        # Enviar correo en background
-        threading.Thread(
-            target=enviar_correo_async,
-            args=(subject, message, remitente, usuario.correo),
-            daemon=True,  # No bloquea cierre de procesos
-        ).start()
-
-        # Respuesta inmediata al frontend
-        return Response(
-            {
-                "mensaje": "Código generado y correo enviado (si todo funciona correctamente)"
-            },
-            status=200,
-        )
-
+        # Aquí puedes guardar el código temporalmente en BD o caché
+        return Response({"message": "Código enviado", "codigo": codigo})
 
 class ResetPasswordView(APIView):
     authentication_classes = []
