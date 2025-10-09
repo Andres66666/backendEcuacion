@@ -26,7 +26,7 @@ if DEBUG:
 else:
     # Solo el dominio de Render para producción
     ALLOWED_HOSTS = [
-        "backendecuacion.onrender.com",
+        "backendecuacion-1.onrender.com",
     ]
 
 # Añadimos hosts locales si no estamos en producción forzada
@@ -153,7 +153,7 @@ REST_FRAMEWORK = {
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
     # Solo si usas DRF Spectacular
-    # "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
 SIMPLE_JWT = {
