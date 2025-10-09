@@ -13,18 +13,25 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Clave secreta (debe estar en entorno para producción)
 SECRET_KEY = "django-insecure-(fn$sd-g@*)51f7)nc!a^3xeb(ma^9f6pm02_a+2h6tw^251fq"
+
 # Debug
-DEBUG = config("DEBUG", default=True, cast=bool)  # Default True para desarrollo local
+DEBUG = config("DEBUG", default=True, cast=bool)
 
 # Hosts permitidos
 if DEBUG:
-    ALLOWED_HOSTS = ["localhost", "127.0.0.1"]  # Desarrollo local
+    # Desarrollo local
+    ALLOWED_HOSTS = [
+        "localhost",
+        "127.0.0.1",
+        "192.168.0.4",  # IP de tu red local para pruebas
+        # Puedes agregar más IPs locales si las necesitas
+    ]
 else:
     # Producción
-    ALLOWED_HOSTS = ["backendecuacion.onrender.com"]  # Tu dominio en Render u otro hosting
-    # Si quieres agregar otros dominios en producción:
-    # ALLOWED_HOSTS += ["www.otrodominio.com"]
-
+    ALLOWED_HOSTS = [
+        "backendecuacion.onrender.com",
+        # Puedes agregar aquí más dominios de producción
+    ]
 APPEND_SLASH = True
 
 # =====================================================
@@ -188,7 +195,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:4200",
     "http://127.0.0.1:4200",
     "https://mallafinita.netlify.app",
-
+    
 ]
 
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
