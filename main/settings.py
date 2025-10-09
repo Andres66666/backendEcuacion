@@ -209,10 +209,13 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:4200",
 ]
 
-CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_HEADERS = True
 CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+CSRF_TRUSTED_ORIGINS = [
+    "https://mallafinita.netlify.app",
+    "https://backendecuacion-1.onrender.com",
+]
 # =====================================================
 # === 12. SEGURIDAD EN PRODUCCIÓN =====================
 # =====================================================
