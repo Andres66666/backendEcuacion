@@ -94,7 +94,7 @@ MIDDLEWARE = [
     "GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware", # esto esta bien 
     "GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseMiddleware", #  esto esta bien 
     "GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseMiddleware", # esto esta bien pero hya que mejorar 
-    # "GuardianUnivalle_Benito_Yucra.detectores.detector_csrf.CSRFDefenseMiddleware", # esto esta mal da error 
+    "GuardianUnivalle_Benito_Yucra.detectores.detector_csrf.CSRFDefenseMiddleware", # esto esta mal da error 
 
     # esto se agrego
     "users.middleware.AuditoriaMiddleware",
@@ -252,6 +252,26 @@ SQLI_DEFENSE_TRUSTED_URLS = [
     "https://backendecuacion.onrender.com",
     "https://mallafinita.netlify.app",
 ]
+
+
+# --- XSS Defense ---
+XSS_DEFENSE_TRUSTED_IPS = [
+    "127.0.0.1",
+    "192.168.0.3",
+]
+XSS_DEFENSE_SANITIZE_INPUT = False
+XSS_DEFENSE_BLOCK = True
+XSS_DEFENSE_EXCLUDED_PATHS = ["/health", "/internal"]
+
+
+# --- CSRF Defense ---
+CSRF_DEFENSE_TRUSTED_IPS = [
+    "127.0.0.1",
+    "192.168.0.3",
+]
+
+CSRF_DEFENSE_BLOCK = True
+CSRF_DEFENSE_LOG = True
 # =====================================================
 # 15. AUTO FIELD Y LOGS
 # =====================================================
