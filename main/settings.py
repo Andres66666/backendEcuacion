@@ -91,6 +91,7 @@ MIDDLEWARE = [
     "django_otp.middleware.OTPMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware",
 ]
 
 # =====================================================
