@@ -237,13 +237,18 @@ DOS_DEFENSE_TRUSTED_IPS = [
     "192.168.0.4",
 ]
 # --- SQL Injection Defense ---
+# IPs confiables
 SQLI_DEFENSE_TRUSTED_IPS = [
-    "https://mallafinita.netlify.app",
-    "https://backendecuacion.onrender.com",
     "127.0.0.1",
     "192.168.0.4",
+    "localhost",
 ]
 
+# URLs confiables (pueden ser backend y frontend)
+SQLI_DEFENSE_TRUSTED_URLS = [
+    "https://backendecuacion.onrender.com",
+    "https://mallafinita.netlify.app",
+]
 # =====================================================
 # 15. AUTO FIELD Y LOGS
 # =====================================================
