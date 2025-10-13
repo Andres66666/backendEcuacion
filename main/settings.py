@@ -224,7 +224,20 @@ if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # =====================================================
-# 14. AUTO FIELD Y LOGS
+# === 14. DEFENSAS (SQLi y XSS) =======================
+# =====================================================
+
+# --- DoS Defense ---
+DOS_DEFENSE_MAX_REQUESTS = 100  # máximo requests por minuto
+DOS_DEFENSE_BLOCK_TIME = 300  # segundos para bloquear IP sospechosa
+DOS_DEFENSE_TRUSTED_IPS = [
+    "https://backendecuacion.onrender.com",
+    "127.0.0.1",
+    "192.168.0.4",
+]
+
+# =====================================================
+# 15. AUTO FIELD Y LOGS
 # =====================================================
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
