@@ -101,6 +101,7 @@ class AuditoriaMiddleware:
                 {"mensaje": "Ataque detectado", "tipo": tipos_str}, status=403
             )
 
-        # No se detectó ataque → continuar normal
+        # No se detectó ataque → continuar normal 
         response = self.get_response(request)
         return response
+# aqui se realiza cambios 
