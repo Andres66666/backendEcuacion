@@ -80,6 +80,7 @@ class AuditoriaMiddleware:
                         user_agent=request.META.get("HTTP_USER_AGENT", ""),
                         bloqueado=True,
                         fecha=now(),
+                        url=ataque_detectado.get("url", ""),
                     )
                     print(
                         f"[AuditoriaMiddleware] Ataque registrado y bloqueado desde IP {ip} (tipo: {tipos_str})"
