@@ -228,7 +228,7 @@ if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # =====================================================
-# === 14. DEFENSAS (SQLi y XSS) =======================
+# === 14. DEFENSAS (SQLi , XSS , CSRF y DOS) =======================
 # =====================================================
 
 # --- DoS Defense ---
@@ -240,6 +240,12 @@ DOS_DEFENSE_TRUSTED_IPS = [
     "127.0.0.1",
     "192.168.0.3",
 ]
+DOS_LIMITE_PETICIONES = 120      # peticiones por minuto
+DOS_VENTANA_SEGUNDOS = 60
+DOS_PESO = 0.6
+DOS_TRUSTED_IPS = ["127.0.0.1"]  # evita marcar tus propios tests
+DOS_LIMITE_ENDPOINTS = 80        # si una IP accede a más de 80 rutas/minuto
+
 # --- SQL Injection Defense ---
 # IPs confiables
 SQLI_DEFENSE_TRUSTED_IPS = [
