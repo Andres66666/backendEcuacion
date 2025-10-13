@@ -354,6 +354,9 @@ class Atacante(models.Model):
     descripcion = models.TextField()  #
     fecha = models.DateTimeField(auto_now_add=True)
     bloqueado = models.BooleanField(default=False)
+    
+    # NUEVO: campo para registrar la URL/endpoint atacado
+    url = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return f"{self.ip} - {self.fecha}"

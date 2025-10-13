@@ -52,6 +52,7 @@ class AuditoriaMiddleware:
             else:
                 descripcion_str = str(descripcion or "")
 
+            # users/middleware.py (fragmento de la sección donde guardas el atacante)
             try:
                 atacante_existente = Atacante.objects.filter(ip=ip).first()
 
@@ -61,30 +62,26 @@ class AuditoriaMiddleware:
                     else:
                         atacante_existente.tipos = tipos_str
                         atacante_existente.descripcion = descripcion_str
-                        atacante_existente.payload = payload
-                        atacante_existente.user_agent = request.META.get(
-                            "HTTP_USER_AGENT", ""
-                        )
+                        atacante_existente.payload = (payload or "")[:2000]  # truncar si es muy grande
+                        atacante_existente.user_agent = request.META.get("HTTP_USER_AGENT", "")
                         atacante_existente.bloqueado = True
+                        # actualizar url si viene
+                        atacante_existente.url = ataque_detectado.get("url", atacante_existente.url)
                         atacante_existente.fecha = now()
                         atacante_existente.save()
-                        print(
-                            f"[AuditoriaMiddleware] Ataque actualizado y bloqueado para IP {ip} (tipo: {tipos_str})"
-                        )
+                        print(f"[AuditoriaMiddleware] Ataque actualizado y bloqueado para IP {ip} (tipo: {tipos_str})")
                 else:
                     Atacante.objects.create(
                         ip=ip,
                         tipos=tipos_str,
                         descripcion=descripcion_str,
-                        payload=payload,
+                        payload=(payload or "")[:2000],
                         user_agent=request.META.get("HTTP_USER_AGENT", ""),
                         bloqueado=True,
                         fecha=now(),
                         url=ataque_detectado.get("url", ""),
                     )
-                    print(
-                        f"[AuditoriaMiddleware] Ataque registrado y bloqueado desde IP {ip} (tipo: {tipos_str})"
-                    )
+                    print(f"[AuditoriaMiddleware] Ataque registrado y bloqueado desde IP {ip} (tipo: {tipos_str})")
 
                 # ✅ Registrar el evento en el log de auditoría
                 registrar_evento(
