@@ -93,8 +93,8 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware", # esto esta bien 
     "GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseMiddleware", #  esto esta bien 
-    "GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseMiddleware",
-    "GuardianUnivalle_Benito_Yucra.detectores.detector_csrf.CSRFDefenseMiddleware",
+    "GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseMiddleware", # esto esta bien pero hya que mejorar 
+    "GuardianUnivalle_Benito_Yucra.detectores.detector_csrf.CSRFDefenseMiddleware", # esto esta mal da error 
 
 
 
