@@ -147,6 +147,22 @@ class TempPasswordReset(models.Model):
     def __str__(self):
         return f"Token {self.token} para {self.usuario.correo}"
 
+# === AUDITORIA ATACNATES ===
+class Atacante(models.Model):
+    ip = models.GenericIPAddressField()
+    user_agent = models.TextField(blank=True, null=True)
+    payload = models.TextField(blank=True, null=True)
+    tipos = models.TextField()  # Lista de ataques detectados
+    descripcion = models.TextField()  #
+    fecha = models.DateTimeField(auto_now_add=True)
+    bloqueado = models.BooleanField(default=False)
+    
+    # NUEVO: campo para registrar la URL/endpoint atacado
+    url = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.ip} - {self.fecha}"
+
 
 # =====================================================
 # === =============  seccion 2   === ==================
@@ -344,19 +360,3 @@ class GastosGenerales(models.Model):
     def __str__(self):
         return f"{self.total}"
 
-
-# === AUDITORIA ATACNATES ===
-class Atacante(models.Model):
-    ip = models.GenericIPAddressField()
-    user_agent = models.TextField(blank=True, null=True)
-    payload = models.TextField(blank=True, null=True)
-    tipos = models.TextField()  # Lista de ataques detectados
-    descripcion = models.TextField()  #
-    fecha = models.DateTimeField(auto_now_add=True)
-    bloqueado = models.BooleanField(default=False)
-    
-    # NUEVO: campo para registrar la URL/endpoint atacado
-    url = models.TextField(blank=True, null=True)
-
-    def __str__(self):
-        return f"{self.ip} - {self.fecha}"
