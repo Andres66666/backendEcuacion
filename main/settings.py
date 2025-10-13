@@ -29,7 +29,7 @@ DEBUG = ENVIRONMENT == "development"
 ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
-    "192.168.0.4",
+    "192.168.0.3",
     "backendecuacion.onrender.com",
 ]
 
@@ -92,7 +92,10 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware", # esto esta bien 
-    "GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseMiddleware", #  problema  SQLIDefenseMiddleware cambios
+    "GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseMiddleware", #  esto esta bien 
+    "GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseMiddleware",
+
+
     # esto se agrego
     "users.middleware.AuditoriaMiddleware",
 ]
@@ -234,13 +237,13 @@ DOS_DEFENSE_TRUSTED_IPS = [
     "https://mallafinita.netlify.app",
     "https://backendecuacion.onrender.com",
     "127.0.0.1",
-    "192.168.0.4",
+    "192.168.0.3",
 ]
 # --- SQL Injection Defense ---
 # IPs confiables
 SQLI_DEFENSE_TRUSTED_IPS = [
     "127.0.0.1",
-    "192.168.0.4",
+    "192.168.0.3",
     "localhost",
 ]
 
