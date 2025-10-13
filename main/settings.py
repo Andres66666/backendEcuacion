@@ -94,9 +94,7 @@ MIDDLEWARE = [
     "GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware", # esto esta bien 
     "GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseMiddleware", #  esto esta bien 
     "GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseMiddleware", # esto esta bien pero hya que mejorar 
-    "GuardianUnivalle_Benito_Yucra.detectores.detector_csrf.CSRFDefenseMiddleware", # esto esta mal da error 
-
-
+    # "GuardianUnivalle_Benito_Yucra.detectores.detector_csrf.CSRFDefenseMiddleware", # esto esta mal da error 
 
     # esto se agrego
     "users.middleware.AuditoriaMiddleware",
