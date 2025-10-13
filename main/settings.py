@@ -92,6 +92,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware",
+    "GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseMiddleware",
     # esto se agrego
     "users.middleware.AuditoriaMiddleware",
 ]
