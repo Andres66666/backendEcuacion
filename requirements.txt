@@ -18,3 +18,4 @@ django-two-factor-auth
 pyotp==2.9.0
 qrcode[pil]
 Pillow
+user-agents
