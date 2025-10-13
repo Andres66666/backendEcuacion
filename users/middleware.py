@@ -101,4 +101,4 @@ class AuditoriaMiddleware:
         # No se detectó ataque → continuar normal 
         response = self.get_response(request)
         return response
-# aqui se realiza cambios 
+# aqui se realiza cambios nuevos
