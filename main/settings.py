@@ -86,7 +86,6 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
-    "GuardianUnivalle_Benito_Yucra.detectores.detector_csrf.CSRFDefenseMiddleware", #  
 
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -96,6 +95,7 @@ MIDDLEWARE = [
     "GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware", # esto esta bien 
     "GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseMiddleware", #  esto esta bien 
     "GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseMiddleware", # esto esta bien pero hya que mejorar 
+    "GuardianUnivalle_Benito_Yucra.detectores.detector_csrf.CSRFDefenseMiddleware", #  
 
     # esto se agrego
     "users.middleware.AuditoriaMiddleware",
@@ -257,6 +257,8 @@ SQLI_DEFENSE_TRUSTED_URLS = [
 
 # --- XSS Defense ---
 XSS_DEFENSE_TRUSTED_IPS = [
+    "https://backendecuacion.onrender.com",
+    "https://mallafinita.netlify.app",
     "127.0.0.1",
     "192.168.0.3",
 ]
@@ -267,10 +269,16 @@ XSS_DEFENSE_EXCLUDED_PATHS = ["/health", "/internal"]
 
 # --- CSRF Defense ---
 CSRF_DEFENSE_TRUSTED_IPS = [
+    "https://backendecuacion.onrender.com",
+    "https://mallafinita.netlify.app",
     "127.0.0.1",
     "192.168.0.3",
 ]
+# Evitar analizar APIs JSON por defecto
+CSRF_DEFENSE_EXCLUDED_API_PREFIXES = ['/api/']
 
+# bajar sensibilidad (señales mínimas para marcar)
+CSRF_DEFENSE_MIN_SIGNALS = 2
 CSRF_DEFENSE_BLOCK = True
 CSRF_DEFENSE_LOG = True
 # =====================================================
