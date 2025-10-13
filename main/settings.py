@@ -231,6 +231,14 @@ if not DEBUG:
 DOS_DEFENSE_MAX_REQUESTS = 100  # máximo requests por minuto
 DOS_DEFENSE_BLOCK_TIME = 300  # segundos para bloquear IP sospechosa
 DOS_DEFENSE_TRUSTED_IPS = [
+    "https://mallafinita.netlify.app",
+    "https://backendecuacion.onrender.com",
+    "127.0.0.1",
+    "192.168.0.4",
+]
+# --- SQL Injection Defense ---
+SQLI_DEFENSE_TRUSTED_IPS = [
+    "https://mallafinita.netlify.app",
     "https://backendecuacion.onrender.com",
     "127.0.0.1",
     "192.168.0.4",
