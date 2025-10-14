@@ -2,6 +2,7 @@
 from rest_framework import serializers
 from .models import (
     Atacante,
+    AuditoriaEvento,
     GastoOperacion,
     Modulo,
     Proyecto,
@@ -20,6 +21,11 @@ from .models import (
 class AtacanteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Atacante
+        fields = "__all__"
+        
+class AuditoriaEventoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AuditoriaEvento
         fields = "__all__"
 
 

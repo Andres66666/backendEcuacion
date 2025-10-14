@@ -164,6 +164,33 @@ class Atacante(models.Model):
         return f"{self.ip} - {self.fecha}"
 
 
+class AuditoriaEvento(models.Model):
+    TIPO_EVENTO_CHOICES = [
+        ("ACCESO", "Acceso normal"),
+        ("ATAQUE DETECTADO", "Ataque detectado"),
+    ]
+
+    fecha = models.DateTimeField(auto_now_add=True)
+    tipo = models.CharField(max_length=50, choices=TIPO_EVENTO_CHOICES, default="ACCESO")
+    descripcion = models.TextField(blank=True, null=True)
+    usuario_id = models.IntegerField(blank=True, null=True)  # <-- Guardamos el ID del usuario directamente
+    severidad = models.CharField(max_length=20, default="BAJO")
+    ip_cliente = models.GenericIPAddressField(blank=True, null=True)
+    navegador = models.TextField(blank=True, null=True)
+    sistema_operativo = models.TextField(blank=True, null=True)
+    ruta = models.TextField(blank=True, null=True)
+    parametros = models.JSONField(blank=True, null=True)
+    extra = models.JSONField(blank=True, null=True)
+    bloqueado = models.BooleanField(default=False)
+    url = models.TextField(blank=True, null=True)
+
+    class Meta:
+        ordering = ["-fecha"]
+
+    def __str__(self):
+        return f"[{self.tipo}] {self.ip_cliente} - {self.fecha}"
+
+    
 # =====================================================
 # === =============  seccion 2   === ==================
 # =====================================================
