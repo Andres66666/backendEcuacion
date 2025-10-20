@@ -15,9 +15,7 @@ class AuditoriaMiddleware:
             "xss_attack_info",
             "csrf_attack_info",
             "dos_attack_info",
-            "keylogger_attack_info",
         ]
-
         hallazgos = []
         for attr in detectores:
             if hasattr(request, attr):

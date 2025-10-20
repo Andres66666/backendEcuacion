@@ -70,6 +70,7 @@ MIDDLEWARE = [
     "GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseMiddleware", # esto esta bien 
     "GuardianUnivalle_Benito_Yucra.detectores.detector_csrf.CSRFDefenseMiddleware", #  esto esta bien 
     "users.middleware.AuditoriaMiddleware",
+    'users.auditoria_servidor.AuditoriaServidorMiddleware',
 ]
 
 
@@ -165,8 +166,8 @@ EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = "benitoandrescalle035@gmail.com"
-EMAIL_HOST_PASSWORD = "hmczrcgooenggoms" 
+EMAIL_HOST_USER = "mallafinitasrl@gmail.com"
+EMAIL_HOST_PASSWORD = "qvqloiqnernykmja" 
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 # =====================================================

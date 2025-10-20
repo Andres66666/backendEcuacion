@@ -28,6 +28,8 @@ router.register(r"equipo_herramienta", views.EquipoHerramientaViewSet)
 router.register(r"gastos_generales", views.GastosGeneralesViewSet)
 
 router.register(r"auditoria_db", views.AtacanteViewSet)
+router.register(r"auditoria_eventos", views.AuditoriaEventoViewSet)
+
 
 # =====================================================
 # === =============  seccion 4   === ==================

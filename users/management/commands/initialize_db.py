@@ -101,7 +101,7 @@ class Command(BaseCommand):
                 "correo": "CarlaMamani0000087985@gmail.com",
                 "password": "Colaborador123*",
                 "rol": colaborador_role,
-                "imagen_url": "https://res.cloudinary.com/dlrpns8z7/image/upload/v1743595809/sample-image.jpg",
+                "imagen_url": "",
             },
             {
                 "ci": "87654322",
@@ -112,7 +112,7 @@ class Command(BaseCommand):
                 "correo": "luis.ramirez@example.com",
                 "password": "Asistente123*",
                 "rol": asistente_role,
-                "imagen_url": "https://res.cloudinary.com/dlrpns8z7/image/upload/v1743595809/sample-image.jpg",
+                "imagen_url": "",
             },
         ]
 

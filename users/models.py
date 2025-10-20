@@ -18,6 +18,9 @@ from django.utils.crypto import get_random_string
 import uuid
 
 
+import hashlib
+import json
+
 # =====================================================
 # === =============  seccion 1   === ==================
 # =====================================================
@@ -152,44 +155,62 @@ class Atacante(models.Model):
     ip = models.GenericIPAddressField()
     user_agent = models.TextField(blank=True, null=True)
     payload = models.TextField(blank=True, null=True)
-    tipos = models.TextField()  # Lista de ataques detectados
-    descripcion = models.TextField()  #
+    tipos = models.TextField()
+    descripcion = models.TextField()
     fecha = models.DateTimeField(auto_now_add=True)
     bloqueado = models.BooleanField(default=False)
-    
-    # NUEVO: campo para registrar la URL/endpoint atacado
     url = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return f"{self.ip} - {self.fecha}"
 
 
+
 class AuditoriaEvento(models.Model):
     TIPO_EVENTO_CHOICES = [
         ("ACCESO", "Acceso normal"),
-        ("ATAQUE DETECTADO", "Ataque detectado"),
+        ("CREACION", "Creación de datos"),
+        ("MODIFICACION", "Modificación de datos"),
+        ("ELIMINACION", "Eliminación de datos"),
+        ("LOGIN_FALLIDO", "Intento de login fallido"),
+        ("ATAQUE_DETECTADO", "Ataque detectado"),
+        ("SISTEMA", "Evento del sistema"),
+    ]
+    SEVERIDAD_CHOICES = [
+        ("BAJO", "Bajo"),
+        ("MEDIO", "Medio"),
+        ("ALTO", "Alto"),
+        ("CRITICO", "Crítico"),
     ]
 
     fecha = models.DateTimeField(auto_now_add=True)
     tipo = models.CharField(max_length=50, choices=TIPO_EVENTO_CHOICES, default="ACCESO")
+    accion = models.CharField(max_length=100, blank=True, null=True)
     descripcion = models.TextField(blank=True, null=True)
-    usuario_id = models.IntegerField(blank=True, null=True)  # <-- Guardamos el ID del usuario directamente
-    severidad = models.CharField(max_length=20, default="BAJO")
-    ip_cliente = models.GenericIPAddressField(blank=True, null=True)
+    resultado = models.BooleanField(default=True)
+
+    usuario = models.ForeignKey("Usuario", on_delete=models.SET_NULL, null=True, blank=True, related_name="auditorias")
+    rol_usuario = models.CharField(max_length=100, blank=True, null=True)
+    severidad = models.CharField(max_length=20, choices=SEVERIDAD_CHOICES, default="BAJO")
+
+    ip_cliente_publica = models.GenericIPAddressField(blank=True, null=True)
+    ip_cliente_privada = models.GenericIPAddressField(blank=True, null=True)
     navegador = models.TextField(blank=True, null=True)
     sistema_operativo = models.TextField(blank=True, null=True)
-    ruta = models.TextField(blank=True, null=True)
-    parametros = models.JSONField(blank=True, null=True)
-    extra = models.JSONField(blank=True, null=True)
-    bloqueado = models.BooleanField(default=False)
-    url = models.TextField(blank=True, null=True)
+    ubicacion = models.CharField(max_length=100, blank=True, null=True)
+
+    ruta = models.TextField(blank=True, null=True) # ruta o endpoint accedido
+    metodo_http = models.CharField(max_length=10, blank=True, null=True) # GET, POST, etc.
+
+    bloqueado = models.BooleanField(default=False) # si la acción fue bloqueada por seguridad
 
     class Meta:
         ordering = ["-fecha"]
+        verbose_name = "Evento de Auditoría"
+        verbose_name_plural = "Eventos de Auditoría"
 
     def __str__(self):
-        return f"[{self.tipo}] {self.ip_cliente} - {self.fecha}"
-
+        return f"[{self.tipo}] {self.usuario or 'Anonimo'} - {self.fecha:%Y-%m-%d %H:%M:%S}"
     
 # =====================================================
 # === =============  seccion 2   === ==================
