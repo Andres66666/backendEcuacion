@@ -1,10 +1,7 @@
 from GuardianUnivalle_Benito_Yucra.auditoria.registro_auditoria import registrar_evento
-
 from django.http import JsonResponse
 from django.utils.timezone import now
 from users.models import Atacante
-
-
 class AuditoriaMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
@@ -28,7 +25,6 @@ class AuditoriaMiddleware:
                 except Exception:
                     score = 0.0
                 hallazgos.append((score, info))
-
         ataque_detectado = None
         if hallazgos:
             hallazgos.sort(key=lambda x: x[0], reverse=True)
@@ -81,7 +77,7 @@ class AuditoriaMiddleware:
                     )
                     print(f"[AuditoriaMiddleware] Ataque registrado y bloqueado desde IP {ip} (tipo: {tipos_str})")
 
-                # ✅ Registrar el evento en el log de auditoría
+                # Registrar el evento en el log de auditoría
                 registrar_evento(
                     tipo="Bloqueo",
                     descripcion=f"Ataque {tipos_str} bloqueado desde IP {ip}",
@@ -99,4 +95,3 @@ class AuditoriaMiddleware:
         # No se detectó ataque → continuar normal 
         response = self.get_response(request)
         return response
-# aqui se realiza cambios nuevos

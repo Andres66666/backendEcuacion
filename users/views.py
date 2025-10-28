@@ -111,9 +111,7 @@ class LoginView(APIView):
                     status=status.HTTP_403_FORBIDDEN,
                 )
 
-            # ==============================
             # INTENTOS FALLIDOS (EXENTO PARA ADMIN)
-            # ==============================
             if not check_password(password, usuario.password):
                 if not es_admin:
                     if usuario.intentos_fallidos >= 3:
@@ -136,10 +134,8 @@ class LoginView(APIView):
 
                     usuario.save()
 
-                    # ==============================
                     # AUDITORÍA: Login fallido
                     # Solo enviamos usuario_id y roles
-                    # ==============================
                     roles = [ur.rol.nombre for ur in usuario.usuariorol_set.all()]
                     registrar_evento_bd(
                         request=request,
@@ -156,17 +152,13 @@ class LoginView(APIView):
                         status=status.HTTP_400_BAD_REQUEST,
                     )
 
-            # ==============================
             # LOGIN EXITOSO: Reset contadores
-            # ==============================
             usuario.intentos_fallidos = 0
             usuario.logins_exitosos += 1
             usuario.ultimo_intento = timezone.now()
             usuario.save()
 
-            # ==============================
             # ROLES Y PERMISOS
-            # ==============================
             roles = [ur.rol.nombre for ur in usuario.usuariorol_set.all()]
             permisos = []
             for ur in usuario.usuariorol_set.all():
@@ -175,10 +167,8 @@ class LoginView(APIView):
             if not roles or not permisos:
                 return Response({"error": "El usuario no tiene roles ni permisos asignados.", "tipo_mensaje": "error"}, status=status.HTTP_403_FORBIDDEN)
 
-            # ==============================
             # AUDITORÍA: Login exitoso
             # Solo enviamos usuario_id y roles
-            # ==============================
             registrar_evento_bd(
                 request=request,
                 tipo="LOGIN_EXITOSO",
@@ -186,10 +176,7 @@ class LoginView(APIView):
                 severidad="BAJO",
                 extra={"usuario_id": usuario.id, "roles": roles},
             )
-
-            # ==============================
             # MENSAJES DE INICIO DE SESIÓN
-            # ==============================
             mensaje_principal = "¡Inicio de sesión exitoso!"
             mensaje_adicional = ""
             tipo_mensaje = "exito"
@@ -234,9 +221,7 @@ class LoginView(APIView):
             else:
                 mensaje_adicional = "Bienvenido, administrador. Acceso completo."
 
-            # ==============================
             # RESPUESTA PARA SELECCIÓN DE 2FA
-            # ==============================
             return Response({
                 "usuario_id": usuario.id,
                 "requiere_2fa": True,
@@ -268,9 +253,7 @@ class LoginView(APIView):
             except Exception as e:
                 print("Error guardando ataque:", e)
 
-            # ==============================
             # AUDITORÍA: usuario no encontrado
-            # ==============================
             registrar_evento_bd(
                 request=request,
                 tipo="LOGIN_FALLIDO",
@@ -280,7 +263,6 @@ class LoginView(APIView):
             )
 
             return Response({"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
-
 
 class Verificar2FAView(APIView):
     authentication_classes = []

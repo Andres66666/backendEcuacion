@@ -64,11 +64,11 @@ MIDDLEWARE = [
     # Mensajes y UI
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    # Middlewares personalizados
-    "GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware", # esto esta bien 
-    "GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseMiddleware", #  esto esta bien 
-    "GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseMiddleware", # esto esta bien 
-    "GuardianUnivalle_Benito_Yucra.detectores.detector_csrf.CSRFDefenseMiddleware", #  esto esta bien 
+    # Middlewares personalizados Aporte 
+    "GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware", 
+    "GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseMiddleware",
+    "GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseMiddleware",
+    "GuardianUnivalle_Benito_Yucra.detectores.detector_csrf.CSRFDefenseMiddleware",
     "users.middleware.AuditoriaMiddleware",
     'users.auditoria_servidor.AuditoriaServidorMiddleware',
 ]
@@ -268,17 +268,6 @@ DOS_DEFENSE_TRUSTED_IPS = [
     "127.0.0.1",
     "192.168.0.3",
 ]
-
-# --- Keylogger Defense ---
-KEYLOGGER_PESO = 0.4  # peso en la fórmula de amenaza
-KEYLOGGER_SCAN_FOLDERS = [
-    "C:\\Users\\Public",
-    "C:\\Users\\%USERNAME%\\AppData\\Roaming",
-    "C:\\ProgramData",
-    "C:\\Windows\\Temp",
-]
-KEYLOGGER_EXTENSIONS = [".exe", ".dll", ".scr", ".bat", ".cmd", ".msi"]
-KEYLOGGER_PATTERNS = ["keylogger", "spy", "hook", "keyboard", "capture", "stealer"]
 
 # =====================================================
 # === 14. AUTO FIELD Y CONFIGURACIÓN FINAL ============
