@@ -25,7 +25,7 @@ APPEND_SLASH = True  # Redirige URLs sin barra final (opcional)
 # =====================================================
 # === 2. APLICACIONES INSTALADAS ======================
 # =====================================================
-
+    
 INSTALLED_APPS = [
     # Django apps básicas
     "django.contrib.admin",
@@ -183,16 +183,16 @@ MEDIA_URL = "/media/"
 DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
 
 CLOUDINARY_STORAGE = {
-    "CLOUD_NAME": os.getenv("CLOUD_NAME", "dexggkhkd"),
-    "API_KEY": os.getenv("CLOUDINARY_API_KEY", "896862494571978"),
-    "API_SECRET": os.getenv("CLOUDINARY_API_SECRET", "-uWh6mQnL_5dUgI3LIE0rRYxVfI"),
+    "CLOUD_NAME": os.getenv("CLOUD_NAME", "dsbgmboh1"),
+    "API_KEY": os.getenv("CLOUDINARY_API_KEY", "167689378512456"),
+    "API_SECRET": os.getenv("CLOUDINARY_API_SECRET", "T4c-GP9KSbMKC74aGMnBCO1mjpY"),
     "SECURE": True,
 }
 
 cloudinary.config(
-    cloud_name="dexggkhkd",
-    api_key="896862494571978",
-    api_secret="-uWh6mQnL_5dUgI3LIE0rRYxVfI",
+    cloud_name="dsbgmboh1",
+    api_key="167689378512456",
+    api_secret="T4c-GP9KSbMKC74aGMnBCO1mjpY",
     secure=True,
 )
 
@@ -233,7 +233,7 @@ DOS_LIMITE_ENDPOINTS = 80
 DOS_TIEMPO_BLOQUEO = 300 
 DOS_TRUSTED_IPS = ["127.0.0.1","192.168.0.3", ] 
 
-# 🆕 NUEVOS PARÁMETROS DEL SCORE TOTAL:
+# NUEVOS PARÁMETROS DEL SCORE TOTAL:
 DOS_PESO_BLACKLIST = 0.3    # Peso para S_blacklist (IP/CIDR malicioso)
 DOS_PESO_HEURISTICA = 0.1   # Peso para S_heuristica (Headers/Endpoints)
 DOS_UMBRAL_BLOQUEO = 0.8    # Score total (0 a 1.0) para bloquear

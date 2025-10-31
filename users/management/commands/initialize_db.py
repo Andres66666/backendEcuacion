@@ -35,13 +35,7 @@ class Command(BaseCommand):
             "GastosOperaciones",
             # Reportes
             "Reportes",
-            "ReporteSQL",
-            "ReporteXSS",
-            "ReporteCSRF",
-            "ReporteDoS",
-            "ReporteKeylogger",
-            "ReporteAuditoria",
-            "ReporteIAGeneral",
+            
         ]
 
         permisos_objetos = {}
@@ -66,13 +60,6 @@ class Command(BaseCommand):
         # Asistente → solo acceso a Reportes
         permisos_asistente = [
             "Reportes",
-            "ReporteSQL",
-            "ReporteXSS",
-            "ReporteCSRF",
-            "ReporteDoS",
-            "ReporteKeylogger",
-            "ReporteAuditoria",
-            "ReporteIAGeneral",
         ]
         for nombre_permiso in permisos_asistente:
             RolPermiso.objects.get_or_create(
@@ -83,33 +70,33 @@ class Command(BaseCommand):
         usuarios_data = [
             {
                 "ci": "13247291",
-                "nombre": "Andres Benito",
+                "nombre": "Agapito",
                 "apellido": "Yucra",
-                "fecha_nacimiento": date(1998, 11, 6),
-                "telefono": "72937437",
-                "correo": "benitoandrescalle035@gmail.com",
-                "password": "Andres1234*",
+                "fecha_nacimiento": date(1990, 11, 6),
+                "telefono": "7121290",
+                "correo": "mallafinitasrl@gmail.com",
+                "password": "Admin1234*",
                 "rol": admin_role,
-                "imagen_url": "https://res.cloudinary.com/dlrpns8z7/image/upload/v1743595809/fnsesmm80hgwelhyzaie.jpg",
+                "imagen_url": "",
             },
             {
                 "ci": "87654321",
-                "nombre": "Juan Carlos",
-                "apellido": "Pérez",
-                "fecha_nacimiento": date(1990, 5, 15),
-                "telefono": "78945612",
-                "correo": "CarlaMamani0000087985@gmail.com",
-                "password": "Colaborador123*",
+                "nombre": "Andres Benito",
+                "apellido": "Calle Yucra",
+                "fecha_nacimiento": date(1998, 5, 15),
+                "telefono": "72937437",
+                "correo": "benitoandrescalle035@gmail.com",
+                "password": "Andres1234*",
                 "rol": colaborador_role,
                 "imagen_url": "",
             },
             {
                 "ci": "87654322",
-                "nombre": "Luis",
-                "apellido": "Ramirez",
+                "nombre": "Carla",
+                "apellido": "Mamani",
                 "fecha_nacimiento": date(1995, 7, 10),
                 "telefono": "70123456",
-                "correo": "luis.ramirez@example.com",
+                "correo": "carlamamani0000087985@gmail.com",
                 "password": "Asistente123*",
                 "rol": asistente_role,
                 "imagen_url": "",
