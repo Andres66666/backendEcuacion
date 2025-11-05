@@ -65,12 +65,12 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # Middlewares personalizados Aporte 
-    "GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware", 
-    "GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseMiddleware",
-    "GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseMiddleware",
-    "GuardianUnivalle_Benito_Yucra.detectores.detector_csrf.CSRFDefenseMiddleware",
-    "users.middleware.AuditoriaMiddleware",
-    'users.auditoria_servidor.AuditoriaServidorMiddleware',
+    #"GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware", 
+    #"GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseMiddleware",
+    #"GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseMiddleware",
+    #"GuardianUnivalle_Benito_Yucra.detectores.detector_csrf.CSRFDefenseMiddleware",
+    #"users.middleware.AuditoriaMiddleware",
+    #'users.auditoria_servidor.AuditoriaServidorMiddleware',
 ]
 
 
@@ -102,13 +102,23 @@ WSGI_APPLICATION = "main.wsgi.application"
 # === 5. BASE DE DATOS ================================
 # =====================================================
 
-DATABASES = {
+""" DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": "Ecuacion",
         "USER": "postgres",
         "PASSWORD": "13247291",
         "HOST": "localhost",
+        "PORT": "5432",
+    }
+}  """
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "ecuacion_vycn",
+        "USER": "ecuacion_vycn_user",
+        "PASSWORD": "9froj4SL2YZL3jzZnIbN5VYLVwFZZHLF",
+        "HOST": "dpg-d45et32dbo4c73frsu80-a.oregon-postgres.render.com",
         "PORT": "5432",
     }
 } 

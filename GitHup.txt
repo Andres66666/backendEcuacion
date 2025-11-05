@@ -9,6 +9,8 @@ git add .
 git commit -m "Fin"
 git remote add origin https://github.com/Andres66666/FrontendEcuacion.git
 git push -u origin main
+git checkout -b Produccion 
+git push -u origin Produccion
 
 
 git config --global user.name "Andrés66666"
@@ -20,6 +22,8 @@ git add .
 git commit -m "GuardianUnivalleSQL"
 git remote add origin https://github.com/Andres66666/backendEcuacion.git
 git push -u origin main
+git checkout -b Produccion 
+git push -u origin Produccion
 
 
 git config --global user.name "Andrés66666"
@@ -31,6 +35,8 @@ git add .
 git commit -m "Primer lib"
 git remote add origin https://github.com/Andres66666/GuardianUnivalle-Benito-Yucra.git
 git push -u origin main
+git checkout -b Produccion 
+git push -u origin Produccion
 
 
 git pull origin main
