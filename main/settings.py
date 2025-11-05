@@ -18,6 +18,8 @@ ALLOWED_HOSTS = [
     "192.168.0.3",
     "127.0.0.1",
     "localhost",
+    "mallafinita.netlify.app",
+    "backendecuacion.onrender.com",
 ]
 
 APPEND_SLASH = True  # Redirige URLs sin barra final (opcional)
@@ -214,6 +216,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:4200",
     "http://127.0.0.1:4200",
     "https://mallafinita.netlify.app",
+    "https://backendecuacion.onrender.com",
 ]
 
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()

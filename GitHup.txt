@@ -8,9 +8,11 @@ git status
 git add .
 git commit -m "Fin"
 git remote add origin https://github.com/Andres66666/FrontendEcuacion.git
+git push -u origin Produccion
+
 git push -u origin main
 git checkout -b Produccion 
-git push -u origin Produccion
+
 
 
 git config --global user.name "Andrés66666"
@@ -21,9 +23,11 @@ git status
 git add .
 git commit -m "GuardianUnivalleSQL"
 git remote add origin https://github.com/Andres66666/backendEcuacion.git
+git push -u origin Produccion
+
 git push -u origin main
 git checkout -b Produccion 
-git push -u origin Produccion
+
 
 
 git config --global user.name "Andrés66666"
