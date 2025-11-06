@@ -18,9 +18,10 @@ ALLOWED_HOSTS = [
     "192.168.0.3",
     "127.0.0.1",
     "localhost",
-    "mallafinita.netlify.app",
-    "backendecuacion.onrender.com",
+
 ]
+#    "mallafinita.netlify.app",
+#   "backendecuacion.onrender.com",
 
 APPEND_SLASH = True  # Redirige URLs sin barra final (opcional)
 
@@ -67,12 +68,13 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # Middlewares personalizados Aporte 
-    #"GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware", 
-    #"GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseMiddleware",
-    #"GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseMiddleware",
-    #"GuardianUnivalle_Benito_Yucra.detectores.detector_csrf.CSRFDefenseMiddleware",
-    #"users.middleware.AuditoriaMiddleware",
-    #'users.auditoria_servidor.AuditoriaServidorMiddleware',
+    "GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware", 
+    "GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseMiddleware",
+    "GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseMiddleware",
+    "GuardianUnivalle_Benito_Yucra.detectores.detector_csrf.CSRFDefenseMiddleware",
+    #
+    "users.middleware.AuditoriaMiddleware",
+    'users.auditoria_servidor.AuditoriaServidorMiddleware',
 ]
 
 
@@ -103,8 +105,7 @@ WSGI_APPLICATION = "main.wsgi.application"
 # =====================================================
 # === 5. BASE DE DATOS ================================
 # =====================================================
-
-""" DATABASES = {
+DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": "Ecuacion",
@@ -113,8 +114,9 @@ WSGI_APPLICATION = "main.wsgi.application"
         "HOST": "localhost",
         "PORT": "5432",
     }
-}  """
-DATABASES = {
+}  
+
+""" DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": "ecuacion_vycn",
@@ -123,7 +125,7 @@ DATABASES = {
         "HOST": "dpg-d45et32dbo4c73frsu80-a.oregon-postgres.render.com",
         "PORT": "5432",
     }
-} 
+}  """
 
 # =====================================================
 # === 6. CONFIGURACIÓN DE AUTH Y PASSWORDS ============
@@ -215,10 +217,11 @@ cloudinary.config(
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:4200",
     "http://127.0.0.1:4200",
-    "https://mallafinita.netlify.app",
-    "https://backendecuacion.onrender.com",
+   
+    
 ]
-
+# "https://mallafinita.netlify.app",
+#"https://backendecuacion.onrender.com",
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
 CORS_ALLOW_CREDENTIALS = True
 
