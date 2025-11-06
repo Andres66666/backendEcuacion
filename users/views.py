@@ -27,7 +27,6 @@ import pyotp
 import qrcode
 import cloudinary
 from cloudinary import uploader
-
 # =================== MODELOS ===================
 from .models import (
     Atacante,
@@ -1055,11 +1054,9 @@ class GastoOperacionViewSet(viewsets.ModelViewSet):
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
-        # Usa serializer con partial=True para updates parciales (e.g., solo modulo_id)
         serializer = self.get_serializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
 
-        # Maneja usuario modificado (no viene en serializer)
         id_usuario = request.data.get("modificado_por")
         if id_usuario:
             try:
@@ -1068,7 +1065,6 @@ class GastoOperacionViewSet(viewsets.ModelViewSet):
             except Usuario.DoesNotExist:
                 return Response({"error": "Usuario no encontrado"}, status=400)
 
-        # Serializer maneja todo: mapea modulo_id → modulo y guarda
         serializer.save()
         return Response(serializer.data)
 
@@ -1088,21 +1084,29 @@ class GastoOperacionViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        identificador_id = self.request.query_params.get("identificador", None)
-        if identificador_id is not None:
-            queryset = queryset.filter(
-                identificador__id_general=identificador_id
-            )  # Filtrar por el ID del identificador
+        proyecto_id = self.request.query_params.get('identificador')
+        
+        if proyecto_id:
+            return (queryset
+                .filter(identificador__id_general=proyecto_id)
+                .select_related('modulo', 'identificador')  # Carga eager de relaciones
+                .prefetch_related('gastosgenerales_set')  # Carga anticipada de gastos generales
+                .annotate(
+                    total_gastos_generales=Max('gastosgenerales__total')
+                ))
         return queryset
 
     @action(detail=False, methods=["get"])
     def unidades(self, request):
-        # Trae unidades únicas (distinct)
-        unidades = (
-            GastoOperacion.objects.values_list("unidad", flat=True)
+        """Retorna lista única y ordenada de unidades (sin vacíos ni null)."""
+        unidades_qs = (
+            GastoOperacion.objects
+            .exclude(unidad__isnull=True)
+            .exclude(unidad__exact='')
+            .values_list('unidad', flat=True)
             .distinct()
-            .order_by("unidad")
         )
+        unidades = sorted(u for u in unidades_qs if u)
         return Response(unidades)
 
     # Nuevo endpoint
@@ -1159,6 +1163,8 @@ class GastoOperacionViewSet(viewsets.ModelViewSet):
                 "actualizados": Gasto_Operacion.count(),
             }
         )
+    
+   
 
 
 # =====================================================
@@ -1709,3 +1715,20 @@ class GastosGeneralesViewSet(viewsets.ModelViewSet):
         if id_gasto:
             queryset = queryset.filter(id_gasto_operacion=id_gasto)
         return queryset
+
+    @action(detail=False, methods=['get'])
+    def totals_por_proyecto(self, request):
+        proyecto_id = request.query_params.get('proyecto') or request.query_params.get('identificador')
+        if not proyecto_id:
+            return Response({"error": "Debe proporcionar un proyecto"}, status=400)
+
+        totals_qs = (
+            GastosGenerales.objects
+            .filter(id_gasto_operacion__identificador__id_general=proyecto_id)
+            .values('id_gasto_operacion')
+            .annotate(total=Max('total'))
+        )
+
+        # Devolver mapa id_gasto_operacion -> total
+        result = {str(t['id_gasto_operacion']): t['total'] for t in totals_qs}
+        return Response(result)
