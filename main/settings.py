@@ -15,7 +15,7 @@ SECRET_KEY = "django-insecure-(fn$sd-g@*)51f7)nc!a^3xeb(ma^9f6pm02_a+2h6tw^251fq
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    "192.168.0.3",
+    "172.16.9.235",
     "127.0.0.1",
     "localhost",
 
@@ -247,7 +247,7 @@ DOS_VENTANA_SEGUNDOS = 60
 DOS_PESO = 0.6  # Peso para S_dos (Tasa de peticiones)
 DOS_LIMITE_ENDPOINTS = 80 
 DOS_TIEMPO_BLOQUEO = 300 
-DOS_TRUSTED_IPS = ["127.0.0.1","192.168.0.3", ] 
+DOS_TRUSTED_IPS = ["127.0.0.1","172.16.9.235", ] 
 
 # NUEVOS PARÁMETROS DEL SCORE TOTAL:
 DOS_PESO_BLACKLIST = 0.3    # Peso para S_blacklist (IP/CIDR malicioso)
@@ -257,13 +257,13 @@ DOS_UMBRAL_BLOQUEO = 0.8    # Score total (0 a 1.0) para bloquear
 # --- SQL Injection Defense ---
 SQLI_DEFENSE_TRUSTED_IPS = [
     "127.0.0.1",
-    "192.168.0.3",
+    "172.16.9.235",
 ]
 
 # --- XSS Defense ---
 XSS_DEFENSE_TRUSTED_IPS = [
     "127.0.0.1",
-    "192.168.0.3",
+    "172.16.9.235",
 ]
 XSS_DEFENSE_SANITIZE_INPUT = False
 XSS_DEFENSE_BLOCK = True
@@ -272,7 +272,7 @@ XSS_DEFENSE_EXCLUDED_PATHS = ["/health", "/internal"]
 # --- CSRF Defense ---
 CSRF_DEFENSE_TRUSTED_IPS = [
     "127.0.0.1",
-    "192.168.0.3",
+    "172.16.9.235",
 ]
 
 CSRF_DEFENSE_BLOCK = True
@@ -282,7 +282,7 @@ DOS_DEFENSE_MAX_REQUESTS = 100  # máximo requests por minuto
 DOS_DEFENSE_BLOCK_TIME = 300  # segundos para bloquear IP sospechosa
 DOS_DEFENSE_TRUSTED_IPS = [
     "127.0.0.1",
-    "192.168.0.3",
+    "172.16.9.235",
 ]
 
 # =====================================================

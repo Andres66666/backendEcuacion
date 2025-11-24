@@ -201,6 +201,7 @@ class LoginView(APIView):
                         return Response({"error": "Cuenta bloqueada por no cambiar contraseña. Comuníquese con el administrador", "tipo_mensaje": "error"}, status=status.HTTP_403_FORBIDDEN)
 
                 # Control de caducidad
+                dias_transcurridos = None
                 if usuario.fecha_cambio_password:
                     dias_transcurridos = (timezone.now().date() - usuario.fecha_cambio_password.date()).days
                 else:
@@ -233,6 +234,7 @@ class LoginView(APIView):
                 "imagen_url": usuario.imagen_url,
                 "mensaje_adicional": mensaje_adicional,
                 "tipo_mensaje": tipo_mensaje,
+                "dias_transcurridos": dias_transcurridos,
                 "dias_transcurridos": dias_transcurridos,
                 "requiere_cambio_password": requiere_cambio_password,
                 "mensaje_urgente": mensaje_urgente,
