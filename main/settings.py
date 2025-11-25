@@ -4,6 +4,7 @@ from datetime import timedelta
 import os
 from decouple import config
 import cloudinary
+from argon2.low_level import Type as Argon2Type
 
 # =====================================================
 # === 1. RUTAS BASE Y CLAVES DE SEGURIDAD ============
@@ -15,7 +16,7 @@ SECRET_KEY = "django-insecure-(fn$sd-g@*)51f7)nc!a^3xeb(ma^9f6pm02_a+2h6tw^251fq
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    "172.16.9.235",
+    "192.168.0.8",
     "127.0.0.1",
     "localhost",
 
@@ -68,10 +69,11 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # Middlewares personalizados Aporte 
-    "GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware", 
-    "GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseMiddleware",
-    "GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseMiddleware",
+    
+    "GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseCryptoMiddleware",
+    "GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseCryptoMiddleware",
     "GuardianUnivalle_Benito_Yucra.detectores.detector_csrf.CSRFDefenseMiddleware",
+    #"GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware", 
     #
     "users.middleware.AuditoriaMiddleware",
     'users.auditoria_servidor.AuditoriaServidorMiddleware',
@@ -247,7 +249,7 @@ DOS_VENTANA_SEGUNDOS = 60
 DOS_PESO = 0.6  # Peso para S_dos (Tasa de peticiones)
 DOS_LIMITE_ENDPOINTS = 80 
 DOS_TIEMPO_BLOQUEO = 300 
-DOS_TRUSTED_IPS = ["127.0.0.1","172.16.9.235", ] 
+DOS_TRUSTED_IPS = ["127.0.0.1","192.168.0.8", ] 
 
 # NUEVOS PARÁMETROS DEL SCORE TOTAL:
 DOS_PESO_BLACKLIST = 0.3    # Peso para S_blacklist (IP/CIDR malicioso)
@@ -257,13 +259,13 @@ DOS_UMBRAL_BLOQUEO = 0.8    # Score total (0 a 1.0) para bloquear
 # --- SQL Injection Defense ---
 SQLI_DEFENSE_TRUSTED_IPS = [
     "127.0.0.1",
-    "172.16.9.235",
+    "192.168.0.8",
 ]
 
 # --- XSS Defense ---
 XSS_DEFENSE_TRUSTED_IPS = [
     "127.0.0.1",
-    "172.16.9.235",
+    "192.168.0.8",
 ]
 XSS_DEFENSE_SANITIZE_INPUT = False
 XSS_DEFENSE_BLOCK = True
@@ -272,7 +274,7 @@ XSS_DEFENSE_EXCLUDED_PATHS = ["/health", "/internal"]
 # --- CSRF Defense ---
 CSRF_DEFENSE_TRUSTED_IPS = [
     "127.0.0.1",
-    "172.16.9.235",
+    "192.168.0.8",
 ]
 
 CSRF_DEFENSE_BLOCK = True
@@ -282,7 +284,7 @@ DOS_DEFENSE_MAX_REQUESTS = 100  # máximo requests por minuto
 DOS_DEFENSE_BLOCK_TIME = 300  # segundos para bloquear IP sospechosa
 DOS_DEFENSE_TRUSTED_IPS = [
     "127.0.0.1",
-    "172.16.9.235",
+    "192.168.0.8",
 ]
 
 # =====================================================
@@ -290,3 +292,28 @@ DOS_DEFENSE_TRUSTED_IPS = [
 # =====================================================
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+
+# Clave maestra para derivación (base64 de 32 bytes aleatorios)
+# Clave maestra para derivación (base64 de 32 bytes aleatorios - GENERA UNA VEZ Y GUÁRDALA)
+CSRF_DEFENSE_MASTER_KEY = "teXQI7"  # Reemplaza con tu clave fija
+# Opciones criptográficas
+CSRF_DEFENSE_AEAD = "AESGCM"  # o "CHACHA20" (elige uno; AESGCM es recomendado)
+CSRF_DEFENSE_ARGON2 = {
+    "time_cost": 2,
+    "memory_cost": 65536,
+    "parallelism": 1,
+    "hash_len": 32,
+    "type": Argon2Type.ID,  # Asegúrate de importar: from argon2.low_level import Type as Argon2Type
+}
+CSRF_DEFENSE_HASH = "SHA256"  # o "SHA3"
+# Etiquetas para derivación de claves (no cambies a menos que sepas)
+CSRF_HMAC_LABEL = b"csrfdefense-hmac"
+CSRF_AEAD_LABEL = b"csrfdefense-aead"
+# Otras configuraciones (ajusta según tus necesidades)
+CSRF_DEFENSE_MIN_SIGNALS = 1  # Mínimo de señales para marcar como ataque
+CSRF_DEFENSE_EXCLUDED_API_PREFIXES = ["/api/"]  # Excluir rutas API
+CSRF_DEFENSE_TRUSTED_IPS = ["127.0.0.1", "192.168.0.8"]  # IPs confiables (ya las tienes)
+CSRF_DEFENSE_EXCLUDED_PATHS = []  # Rutas excluidas
+CSRF_DEFENSE_WEIGHT = 0.2  # Peso para el score de señales
