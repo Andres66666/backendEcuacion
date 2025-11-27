@@ -68,7 +68,7 @@ class Usuario(models.Model):
         return f"{self.nombre} {self.apellido}"
 
     # ... hasta aqui funciona el codigo correo  ...
-    # ← NUEVO: Campos para 2FA (agrega si no existen)
+    # Campos para 2FA (agrega si no existen)
     tipo_2fa = models.CharField(
         max_length=20,
         choices=[("correo", "Correo"), ("totp", "Google Authenticator")],
@@ -76,7 +76,7 @@ class Usuario(models.Model):
     )
     secret_2fa = models.CharField(max_length=32, blank=True, null=True)
 
-    # ← NUEVO: Métodos para TOTP
+    # Métodos para TOTP
     def generar_secret_2fa(self):
         """Genera un nuevo secreto TOTP para Google Authenticator"""
         if not self.secret_2fa:
@@ -248,9 +248,6 @@ class Proyecto(models.Model):
 
 
 # cambios nuevos modulo
-
-
-# ... (código existente de secciones 1 y 2) ...
 class Modulo(models.Model):
     proyecto = models.ForeignKey(
         Proyecto, on_delete=models.CASCADE, related_name="modulos"

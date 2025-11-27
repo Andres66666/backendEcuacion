@@ -1,9 +1,9 @@
 # E:\EcuacionPotosi\backendEcuacion\users\middleware.py
 import base64
-from functools import cache  # Nota: 'cache' es de functools, pero no se usa aquí; puedes quitarlo si no lo necesitas
+from functools import cache 
 import json
 import time
-from GuardianUnivalle_Benito_Yucra.detectores.detector_csrf import encrypt_csrf_token, decrypt_csrf_token  # Importa solo lo que usas en test_crypto
+from GuardianUnivalle_Benito_Yucra.detectores.detector_csrf import encrypt_csrf_token, decrypt_csrf_token  
 from GuardianUnivalle_Benito_Yucra.auditoria.registro_auditoria import registrar_evento
 from django.http import JsonResponse
 from django.utils.timezone import now
@@ -53,7 +53,6 @@ class AuditoriaMiddleware(MiddlewareMixin):
             try:
                 atacante_existente = Atacante.objects.filter(ip=ip).first()
                 if atacante_existente:
-                    # Siempre actualizar el registro con nueva info del ataque y setear bloqueado=True
                     # Esto maneja reataques después de desbloqueo (cache expirado o manual)
                     atacante_existente.tipos = tipos_str
                     atacante_existente.descripcion = descripcion_str

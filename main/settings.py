@@ -73,7 +73,7 @@ MIDDLEWARE = [
     "GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseCryptoMiddleware",
     "GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseCryptoMiddleware",
     "GuardianUnivalle_Benito_Yucra.detectores.detector_csrf.CSRFDefenseMiddleware",
-    #"GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware", 
+    "GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware", 
     #
     "users.middleware.AuditoriaMiddleware",
     'users.auditoria_servidor.AuditoriaServidorMiddleware',
@@ -295,9 +295,11 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 
-# Clave maestra para derivación (base64 de 32 bytes aleatorios)
-# Clave maestra para derivación (base64 de 32 bytes aleatorios - GENERA UNA VEZ Y GUÁRDALA)
-CSRF_DEFENSE_MASTER_KEY = "teXQI7"  # Reemplaza con tu clave fija
+# Clave maestra para derivación (base64 de 32 bytes aleatorios )
+CSRF_DEFENSE_MASTER_KEY = "t9G6OYbT9ldFf/XSKmdsiAQMUmJiD8atbxtRI+SzK/s="
+SQLI_DEFENSE_MASTER_KEY = "t9G6OYbT9ldFf/XSKmdsiAQMUmJiD8atbxtRI+SzK/s="
+XSS_DEFENSE_MASTER_KEY = "t9G6OYbT9ldFf/XSKmdsiAQMUmJiD8atbxtRI+SzK/s="
+
 # Opciones criptográficas
 CSRF_DEFENSE_AEAD = "AESGCM"  # o "CHACHA20" (elige uno; AESGCM es recomendado)
 CSRF_DEFENSE_ARGON2 = {
@@ -305,15 +307,15 @@ CSRF_DEFENSE_ARGON2 = {
     "memory_cost": 65536,
     "parallelism": 1,
     "hash_len": 32,
-    "type": Argon2Type.ID,  # Asegúrate de importar: from argon2.low_level import Type as Argon2Type
+    "type": Argon2Type.ID, 
 }
 CSRF_DEFENSE_HASH = "SHA256"  # o "SHA3"
-# Etiquetas para derivación de claves (no cambies a menos que sepas)
+# Etiquetas para derivación de claves 
 CSRF_HMAC_LABEL = b"csrfdefense-hmac"
 CSRF_AEAD_LABEL = b"csrfdefense-aead"
-# Otras configuraciones (ajusta según tus necesidades)
+# Otras configuraciones 
 CSRF_DEFENSE_MIN_SIGNALS = 1  # Mínimo de señales para marcar como ataque
 CSRF_DEFENSE_EXCLUDED_API_PREFIXES = ["/api/"]  # Excluir rutas API
-CSRF_DEFENSE_TRUSTED_IPS = ["127.0.0.1", "192.168.0.8"]  # IPs confiables (ya las tienes)
+CSRF_DEFENSE_TRUSTED_IPS = ["127.0.0.1", "192.168.0.8"]  # IPs confiables 
 CSRF_DEFENSE_EXCLUDED_PATHS = []  # Rutas excluidas
 CSRF_DEFENSE_WEIGHT = 0.2  # Peso para el score de señales
