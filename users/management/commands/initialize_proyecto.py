@@ -9,15 +9,15 @@ class Command(BaseCommand):
     help = "Inicializa la base de datos con datos de prueba para Proyecto, Modulo y GastoOperacion"
 
     def handle(self, *args, **kwargs):
-        self.stdout.write("🔄 Inicializando datos de Proyecto, Módulo y Gasto de Operación...")
+        self.stdout.write("Inicializando datos de Proyecto, Módulo y Gasto de Operación...")
 
         try:
             # --- OBTENER USUARIO CREADOR ---
             # Asume que el usuario Administrador ya fue creado por el comando anterior
             creador = Usuario.objects.get(ci="13247291")
-            self.stdout.write(f"✅ Usuario creador encontrado: {creador.nombre} {creador.apellido}")
+            self.stdout.write(f"Usuario creador encontrado: {creador.nombre} {creador.apellido}")
         except Usuario.DoesNotExist:
-            self.stdout.write(self.style.ERROR("❌ Error: El usuario Administrador con CI '13247291' no existe. ¡Asegúrate de ejecutar initialize_db primero!"))
+            self.stdout.write(self.style.ERROR("Error: El usuario Administrador con CI '13247291' no existe. ¡Asegúrate de ejecutar initialize_db primero!"))
             return
 
         # --- 1. CREAR PROYECTO ---
@@ -45,9 +45,9 @@ class Command(BaseCommand):
         )
 
         if created_proyecto:
-            self.stdout.write(f"✅ Proyecto creado: {proyecto.NombreProyecto} (ID: {proyecto.id_general})")
+            self.stdout.write(f"Proyecto creado: {proyecto.NombreProyecto} (ID: {proyecto.id_proyecto})")
         else:
-            self.stdout.write(f"ℹ️ Proyecto ya existe: {proyecto.NombreProyecto} (ID: {proyecto.id_general}). Usando registro existente.")
+            self.stdout.write(f"Proyecto ya existe: {proyecto.NombreProyecto} (ID: {proyecto.id_proyecto}). Usando registro existente.")
 
         # --- 2. CREAR MÓDULO (basado en image_f66084.png) ---
         self.stdout.write("--- Creando Módulo ---")
@@ -71,9 +71,9 @@ class Command(BaseCommand):
         )
 
         if created_modulo:
-            self.stdout.write(f"✅ Módulo creado: {modulo.codigo} - {modulo.nombre} (ID: {modulo.id})")
+            self.stdout.write(f"Módulo creado: {modulo.codigo} - {modulo.nombre} (ID: {modulo.id})")
         else:
-            self.stdout.write(f"ℹ️ Módulo ya existe: {modulo.codigo} - {modulo.nombre} (ID: {modulo.id}). Usando registro existente.")
+            self.stdout.write(f"Módulo ya existe: {modulo.codigo} - {modulo.nombre} (ID: {modulo.id}). Usando registro existente.")
 
         # --- 3. CREAR GASTO DE OPERACIÓN (basado en image_f660da.png) ---
         self.stdout.write("--- Creando GastoOperacion ---")
@@ -100,18 +100,18 @@ class Command(BaseCommand):
         )
 
         if created_gasto:
-            self.stdout.write(f"✅ GastoOperacion creado: {gasto.descripcion} (Costo: {gasto.costo_parcial})")
+            self.stdout.write(f"GastoOperacion creado: {gasto.descripcion} (Costo: {gasto.costo_parcial})")
         else:
             # Forzamos la actualización de los campos si ya existe (útil para pruebas)
             for key, value in gasto_data.items():
                 setattr(gasto, key, value)
             gasto.save() # Guarda y recalcula costo_parcial
-            self.stdout.write(f"ℹ️ GastoOperacion ya existe. Actualizado: {gasto.descripcion} (Costo: {gasto.costo_parcial})")
+            self.stdout.write(f"GastoOperacion ya existe. Actualizado: {gasto.descripcion} (Costo: {gasto.costo_parcial})")
 
 
         self.stdout.write(
             self.style.SUCCESS(
-                "🎉 ¡Datos de Proyecto, Módulo y Gasto inicializados exitosamente!"
+                "¡Datos de Proyecto, Módulo y Gasto inicializados exitosamente!"
             )
         )
 

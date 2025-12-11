@@ -45,7 +45,6 @@ class Command(BaseCommand):
             )
             permisos_objetos[nombre_permiso] = permiso
 
-        # --- ASIGNAR PERMISOS A ROLES ---
         # Administrador → todos los permisos
         for permiso in permisos_objetos.values():
             RolPermiso.objects.get_or_create(rol=admin_role, permiso=permiso)
@@ -87,7 +86,7 @@ class Command(BaseCommand):
                 "telefono": "72937437",
                 "correo": "benitoandrescalle035@gmail.com",
                 "password": "Andres1234*",
-                "rol": colaborador_role,
+                "rol": admin_role,
                 "imagen_url": "",
             },
             {

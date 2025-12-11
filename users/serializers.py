@@ -1,33 +1,11 @@
 # serializers.py
 from rest_framework import serializers
-from .models import (
-    Atacante,
-    AuditoriaEvento,
-    GastoOperacion,
-    Modulo,
-    Proyecto,
-    Rol,
-    Permiso,
-    Usuario,
-    RolPermiso,
-    UsuarioRol,
-    Materiales,
-    ManoDeObra,
-    EquipoHerramienta,
-    GastosGenerales,
-)
-
+from .models import (Atacante,GastoOperacion,Modulo,Proyecto,Rol,Permiso,Usuario,RolPermiso,UsuarioRol,Materiales,ManoDeObra,EquipoHerramienta,GastosGenerales,)
 
 class AtacanteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Atacante
         fields = "__all__"
-        
-class AuditoriaEventoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = AuditoriaEvento
-        fields = "__all__"
-
 
 # =====================================================
 # === =============  seccion 1   === ==================
@@ -96,26 +74,16 @@ class ModuloSerializer(serializers.ModelSerializer):
 
 class GastoOperacionSerializer(serializers.ModelSerializer):
     identificador = ProyectoSerializer(read_only=True)
-    modulo = ModuloSerializer(read_only=True)  # Para output: objeto completo
-    modulo_id = serializers.PrimaryKeyRelatedField(  # Para input: ID o null
-        queryset=Modulo.objects.all(),
-        source="modulo",  # Mapea "modulo_id" → campo 'modulo'
-        required=False,
-        allow_null=True,
-        write_only=True,  # No se incluye en output
-    )
+    modulo = ModuloSerializer(read_only=True) 
+    modulo_id = serializers.PrimaryKeyRelatedField(  queryset=Modulo.objects.all(), source="modulo",  required=False, allow_null=True, write_only=True,  )
     usuario = UsuarioSerializer(read_only=True)
-
     class Meta:
         model = GastoOperacion
-        fields = "__all__"  # Incluye modulo_id automáticamente
-
+        fields = "__all__"
 
 # =====================================================
 # === =============  seccion 3   === ==================
 # =====================================================
-
-
 class MaterialesSerializer(serializers.ModelSerializer):
     id_gasto_operacion = serializers.PrimaryKeyRelatedField(
         queryset=GastoOperacion.objects.all()
@@ -125,12 +93,8 @@ class MaterialesSerializer(serializers.ModelSerializer):
     class Meta:
         model = Materiales
         fields = "__all__"
-
-
 class ManoDeObraSerializer(serializers.ModelSerializer):
-    id_gasto_operacion = serializers.PrimaryKeyRelatedField(
-        queryset=GastoOperacion.objects.all()
-    )
+    id_gasto_operacion = serializers.PrimaryKeyRelatedField(queryset=GastoOperacion.objects.all())
     usuario = UsuarioSerializer(read_only=True)
 
     class Meta:
@@ -139,9 +103,7 @@ class ManoDeObraSerializer(serializers.ModelSerializer):
 
 
 class EquipoHerramientaSerializer(serializers.ModelSerializer):
-    id_gasto_operacion = serializers.PrimaryKeyRelatedField(
-        queryset=GastoOperacion.objects.all()
-    )
+    id_gasto_operacion = serializers.PrimaryKeyRelatedField(queryset=GastoOperacion.objects.all())
     usuario = UsuarioSerializer(read_only=True)
 
     class Meta:
@@ -150,9 +112,7 @@ class EquipoHerramientaSerializer(serializers.ModelSerializer):
 
 
 class GastosGeneralesSerializer(serializers.ModelSerializer):
-    id_gasto_operacion = serializers.PrimaryKeyRelatedField(
-        queryset=GastoOperacion.objects.all()
-    )
+    id_gasto_operacion = serializers.PrimaryKeyRelatedField(queryset=GastoOperacion.objects.all())
     usuario = UsuarioSerializer(read_only=True)
 
     class Meta:

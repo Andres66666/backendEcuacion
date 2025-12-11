@@ -76,7 +76,7 @@ MIDDLEWARE = [
     "GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware", 
     #
     "users.middleware.AuditoriaMiddleware",
-    'users.auditoria_servidor.AuditoriaServidorMiddleware',
+    
 ]
 
 
@@ -219,8 +219,6 @@ cloudinary.config(
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:4200",
     "http://127.0.0.1:4200",
-   
-    
 ]
 # "https://mallafinita.netlify.app",
 #"https://backendecuacion.onrender.com",
@@ -319,3 +317,7 @@ CSRF_DEFENSE_EXCLUDED_API_PREFIXES = ["/api/"]  # Excluir rutas API
 CSRF_DEFENSE_TRUSTED_IPS = ["127.0.0.1", "192.168.0.8"]  # IPs confiables 
 CSRF_DEFENSE_EXCLUDED_PATHS = []  # Rutas excluidas
 CSRF_DEFENSE_WEIGHT = 0.2  # Peso para el score de señales
+# =====================================
+# URL DEL FRONTEND PARA VERIFICACIONES
+# =====================================
+FRONTEND_URL = "http://localhost:4200"
