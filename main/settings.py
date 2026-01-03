@@ -20,7 +20,7 @@ ALLOWED_HOSTS = [
     "127.0.0.1",
     "localhost",
     "mallafinita.netlify.app",
-    "https://backendecuacion.onrender.com"
+    "backendecuacion.onrender.com"
 
 ]
 #    "mallafinita.netlify.app",
@@ -221,11 +221,12 @@ cloudinary.config(
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:4200",
     "http://127.0.0.1:4200",
-    "mallafinita.netlify.app",
+    "https://mallafinita.netlify.app",
     "https://backendecuacion.onrender.com"
 ]
 # "https://mallafinita.netlify.app",
 #"https://backendecuacion.onrender.com",
+
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
 CORS_ALLOW_CREDENTIALS = True
 

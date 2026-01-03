@@ -6,7 +6,7 @@ git config --global user.email "cya2024773@est.univalle.edu"
 git init
 git status
 git add .
-git commit -m "Fin"
+git commit -m "fin"
 git remote add origin https://github.com/Andres66666/FrontendEcuacion.git
 git push -u origin Produccion
 
@@ -21,7 +21,7 @@ git config --global user.email "cya2024773@est.univalle.edu"
 git init
 git status
 git add .
-git commit -m "Actualizar argon2-cffi a 25.1.0 para Python 3.13"
+git commit -m "fin"
 git remote add origin https://github.com/Andres66666/backendEcuacion.git
 git push -u origin Produccion
 
