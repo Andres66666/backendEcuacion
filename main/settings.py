@@ -19,6 +19,8 @@ ALLOWED_HOSTS = [
     "192.168.0.8",
     "127.0.0.1",
     "localhost",
+    "mallafinita.netlify.app",
+    "https://backendecuacion.onrender.com"
 
 ]
 #    "mallafinita.netlify.app",
@@ -219,6 +221,8 @@ cloudinary.config(
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:4200",
     "http://127.0.0.1:4200",
+    "mallafinita.netlify.app",
+    "https://backendecuacion.onrender.com"
 ]
 # "https://mallafinita.netlify.app",
 #"https://backendecuacion.onrender.com",
