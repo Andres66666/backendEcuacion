@@ -19,4 +19,4 @@ pyotp==2.9.0
 qrcode[pil]
 Pillow
 user-agents
-cryptography>=41.0
+cryptography==41.0.3
