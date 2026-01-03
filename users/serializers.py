@@ -57,7 +57,7 @@ class RolPermisoSerializer(serializers.ModelSerializer):
 
 
 class ProyectoSerializer(serializers.ModelSerializer):
-    usuario = UsuarioSerializer(read_only=True)
+    creado_por = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = Proyecto
@@ -76,7 +76,6 @@ class GastoOperacionSerializer(serializers.ModelSerializer):
     identificador = ProyectoSerializer(read_only=True)
     modulo = ModuloSerializer(read_only=True) 
     modulo_id = serializers.PrimaryKeyRelatedField(  queryset=Modulo.objects.all(), source="modulo",  required=False, allow_null=True, write_only=True,  )
-    usuario = UsuarioSerializer(read_only=True)
     class Meta:
         model = GastoOperacion
         fields = "__all__"
@@ -88,14 +87,12 @@ class MaterialesSerializer(serializers.ModelSerializer):
     id_gasto_operacion = serializers.PrimaryKeyRelatedField(
         queryset=GastoOperacion.objects.all()
     )
-    usuario = UsuarioSerializer(read_only=True)
 
     class Meta:
         model = Materiales
         fields = "__all__"
 class ManoDeObraSerializer(serializers.ModelSerializer):
     id_gasto_operacion = serializers.PrimaryKeyRelatedField(queryset=GastoOperacion.objects.all())
-    usuario = UsuarioSerializer(read_only=True)
 
     class Meta:
         model = ManoDeObra
@@ -104,7 +101,6 @@ class ManoDeObraSerializer(serializers.ModelSerializer):
 
 class EquipoHerramientaSerializer(serializers.ModelSerializer):
     id_gasto_operacion = serializers.PrimaryKeyRelatedField(queryset=GastoOperacion.objects.all())
-    usuario = UsuarioSerializer(read_only=True)
 
     class Meta:
         model = EquipoHerramienta
@@ -113,7 +109,6 @@ class EquipoHerramientaSerializer(serializers.ModelSerializer):
 
 class GastosGeneralesSerializer(serializers.ModelSerializer):
     id_gasto_operacion = serializers.PrimaryKeyRelatedField(queryset=GastoOperacion.objects.all())
-    usuario = UsuarioSerializer(read_only=True)
 
     class Meta:
         model = GastosGenerales

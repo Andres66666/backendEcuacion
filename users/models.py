@@ -1,25 +1,16 @@
-# Create your models here.
-import os
 from django.utils import timezone
-
 from decimal import Decimal
 import uuid
 from django.db import models
 from django.contrib.auth.hashers import make_password
 from decimal import Decimal, InvalidOperation
-from django_otp.util import random_hex
-from django_otp.oath import TOTP
 import base64
 import qrcode
 from io import BytesIO
 import pyotp
 from datetime import timedelta
-from django.utils.crypto import get_random_string
 import uuid
 
-
-import hashlib
-import json
 # =====================================================
 # === =============  seccion 1   === ==================
 # =====================================================
@@ -187,9 +178,8 @@ class Proyecto(models.Model):
     it = models.DecimalField(max_digits=5, decimal_places=2)
     iue = models.DecimalField(max_digits=5, decimal_places=2)
     ganancia = models.DecimalField(max_digits=5, decimal_places=2)
-    a_costo_venta = models.DecimalField(max_digits=5, decimal_places=2)
-    b_margen_utilidad = models.DecimalField(max_digits=5, decimal_places=2)
-    porcentaje_global_100 = models.DecimalField(max_digits=5, decimal_places=2)
+    margen_utilidad = models.DecimalField(max_digits=5, decimal_places=2)
+    creado_por = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='proyectos_creados') 
 
     def __str__(self):
         return f"Registro #{self.id_proyecto}"
@@ -210,14 +200,11 @@ class Modulo(models.Model):
 
 class GastoOperacion(models.Model):
     identificador = models.ForeignKey(Proyecto, on_delete=models.CASCADE, null=False)
-    modulo = models.ForeignKey(  # Nuevo campo: opcional
-        Modulo, on_delete=models.SET_NULL, null=True, blank=True, related_name="gastos"
-    )
+    modulo = models.ForeignKey(Modulo, on_delete=models.SET_NULL, null=True, blank=True, related_name="gastos")
     descripcion = models.CharField(max_length=255)
     unidad = models.CharField(max_length=50)
     cantidad = models.DecimalField(max_digits=10, decimal_places=2)
     precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
-    precio_literal = models.CharField(max_length=255, blank=True, null=True)
     costo_parcial = models.DecimalField(max_digits=12, decimal_places=2, editable=False)
     
 
@@ -284,7 +271,10 @@ class EquipoHerramienta(models.Model):
 # === GASTOS GENERALES Y ADMINISTRATIVOS ===
 class GastosGenerales(models.Model):
     id_gasto_operacion = models.ForeignKey(GastoOperacion, on_delete=models.CASCADE)
+    totalgastosgenerales = models.DecimalField(max_digits=12, decimal_places=2)
     total = models.DecimalField(max_digits=12, decimal_places=2)
+
+    
     def __str__(self):
         return f"{self.total}"
 

@@ -4,6 +4,7 @@ from django.db.models import Max
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from django.db import transaction
 # =================== MODELOS ===================
 from .models import (EquipoHerramienta, GastoOperacion, GastosGenerales, Modulo, Proyecto, ManoDeObra, Materiales, Usuario,)
 # =================== SERIALIZERS ===================
@@ -15,19 +16,40 @@ from .serializers import ( EquipoHerramientaSerializer, GastoOperacionSerializer
 class ProyectoViewSet(viewsets.ModelViewSet):
     queryset = Proyecto.objects.all()
     serializer_class = ProyectoSerializer
+    
 
+    # =====================================================
+    # CREATE
+    # =====================================================
     def create(self, request, *args, **kwargs):
         data = request.data.copy()
+
         try:
+            # 🔹 Determinar usuario (auth o fallback)
+            if request.user.is_authenticated:
+                usuario = request.user
+            else:
+                usuario_id = data.get("creado_por")
+                if not usuario_id:
+                    return Response(
+                        {"error": "Usuario no identificado"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                usuario = Usuario.objects.get(id=usuario_id)
+
             nombre_proyecto = data.get("NombreProyecto", "").strip()
             if not nombre_proyecto:
                 return Response(
-                    {"error": "El campo NombreProyecto es obligatorio."}, status=400
+                    {"error": "El campo NombreProyecto es obligatorio."},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
 
+            # 🔹 Verificar duplicado SOLO para ese usuario
             existente = Proyecto.objects.filter(
-                NombreProyecto__iexact=nombre_proyecto
+                NombreProyecto__iexact=nombre_proyecto,
+                creado_por=usuario,
             ).first()
+
             if existente:
                 return Response(
                     {
@@ -42,14 +64,10 @@ class ProyectoViewSet(viewsets.ModelViewSet):
                         "it": existente.it,
                         "iue": existente.iue,
                         "ganancia": existente.ganancia,
-                        "a_costo_venta": existente.a_costo_venta,
-                        "b_margen_utilidad": existente.b_margen_utilidad,
-                        "porcentaje_global_100": existente.porcentaje_global_100,
+                        "margen_utilidad": existente.margen_utilidad,
                     },
-                    status=200,
+                    status=status.HTTP_200_OK,
                 )
-
-            id_usuario = data.get("creado_por")
 
             proyecto = Proyecto.objects.create(
                 NombreProyecto=nombre_proyecto,
@@ -61,60 +79,71 @@ class ProyectoViewSet(viewsets.ModelViewSet):
                 it=data.get("it", 0),
                 iue=data.get("iue", 0),
                 ganancia=data.get("ganancia", 0),
-                a_costo_venta=data.get("a_costo_venta", 0),
-                b_margen_utilidad=data.get("b_margen_utilidad", 0),
-                porcentaje_global_100=data.get("porcentaje_global_100", 0),
+                margen_utilidad=data.get("margen_utilidad", 0),
+                creado_por=usuario,
             )
 
             serializer = self.get_serializer(proyecto)
-            return Response(serializer.data, status=201)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         except Usuario.DoesNotExist:
-            return Response({"error": "Usuario no encontrado"}, status=400)
+            return Response(
+                {"error": "Usuario no encontrado"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
+    # =====================================================
+    # UPDATE
+    # =====================================================
     def update(self, request, *args, **kwargs):
-        try:
-            instance = self.get_object()
-            data = request.data.copy()
+        instance = self.get_object()
+        data = request.data.copy()
 
-            for field in [
-                "NombreProyecto",
-                "carga_social",
-                "iva_efectiva",
-                "herramientas",
-                "gastos_generales",
-                "iva_tasa_nominal",
-                "it",
-                "iue",
-                "ganancia",
-                "a_costo_venta",
-                "b_margen_utilidad",
-                "porcentaje_global_100",
-            ]:
-                if field in data:
-                    setattr(
-                        instance,
-                        field,
-                        (
-                            data[field]
-                            if field != "NombreProyecto"
-                            else data[field].strip()
-                        ),
-                    )
-            instance.save()
-            serializer = self.get_serializer(instance)
-            return Response(serializer.data)
+        for field in [
+            "NombreProyecto",
+            "carga_social",
+            "iva_efectiva",
+            "herramientas",
+            "gastos_generales",
+            "iva_tasa_nominal",
+            "it",
+            "iue",
+            "ganancia",
+            "margen_utilidad",
+        ]:
+            if field in data:
+                setattr(
+                    instance,
+                    field,
+                    data[field].strip()
+                    if field == "NombreProyecto"
+                    else data[field],
+                )
 
-        except Usuario.DoesNotExist:
-            return Response({"error": "Usuario no encontrado"}, status=400)
-
+        instance.save()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+    # =====================================================
+    # GET QUERYSET
+    # =====================================================
     def get_queryset(self):
         queryset = super().get_queryset()
-        identificador_id = self.request.query_params.get("identificador", None)
-        if identificador_id is not None:
-            queryset = queryset.filter(identificador__id_proyecto=identificador_id)
+        
+        # Solo filtrar para GET, PUT, PATCH
+        if self.request.method in ["GET", "PUT", "PATCH", "LIST"]:
+            if self.request.user.is_authenticated:
+                return queryset.filter(creado_por=self.request.user)
+            usuario_id = self.request.query_params.get("usuario_id")
+            if usuario_id:
+                return queryset.filter(creado_por_id=usuario_id)
+
+        # Para DELETE, devolver todos los proyectos
         return queryset
 
+
+    # =====================================================
+    # DESTROY
+    # =====================================================
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
 
@@ -148,6 +177,8 @@ class ProyectoViewSet(viewsets.ModelViewSet):
             },
             status=status.HTTP_204_NO_CONTENT,
         )
+
+
 
 class ModuloViewSet(viewsets.ModelViewSet):
     queryset = Modulo.objects.all()
@@ -232,12 +263,19 @@ class GastoOperacionViewSet(viewsets.ModelViewSet):
             )
 
         gastos_guardados = []
-        for item_data in data:  # Cambiado: usa item_data para serializer
-            # Usa el serializer para validar y mapear (incluyendo modulo_id → modulo)
+        for item_data in data:
+            # Validar que el modulo (si existe) pertenezca al proyecto
+            modulo_id = item_data.get("modulo_id")
+            if modulo_id:
+                try:
+                    modulo = Modulo.objects.get(id=modulo_id, proyecto=identificador)
+                except Modulo.DoesNotExist:
+                    return Response(
+                        {"error": f"El módulo con ID {modulo_id} no pertenece al proyecto."}, status=400
+                    )
+            # Usa el serializer para validar y mapear
             serializer = self.get_serializer(data=item_data)
             if serializer.is_valid():
-                
-                # Serializer guarda automáticamente (modulo_id se mapea a modulo)
                 gasto = serializer.save(identificador=identificador)
                 gastos_guardados.append(serializer.data)
             else:
@@ -455,13 +493,12 @@ class MaterialesViewSet(viewsets.ModelViewSet):
         if not proyecto_id:
             return Response({"error": "Debe proporcionar un proyecto"}, status=400)
 
-        # Traer todos los materiales vinculados a gastos de operaciones de este proyecto
         materiales = (
             Materiales.objects.filter(
                 id_gasto_operacion__identificador__id_proyecto=proyecto_id
             )
-            .values("descripcion")
-            .annotate(ultimo_precio=Max("precio_unitario"))
+            .values("descripcion", "unidad", "precio_unitario")
+            .distinct()
             .order_by("descripcion")
         )
         return Response(list(materiales))
@@ -640,6 +677,7 @@ class ManoDeObraViewSet(viewsets.ModelViewSet):
             }
         )
 
+
 class EquipoHerramientaViewSet(viewsets.ModelViewSet):
     queryset = EquipoHerramienta.objects.all()
     serializer_class = EquipoHerramientaSerializer
@@ -802,12 +840,11 @@ class GastosGeneralesViewSet(viewsets.ModelViewSet):
                 )
 
             gasto_operacion = GastoOperacion.objects.get(id=id_gasto)
-            usuario = None
             
             gasto_general = GastosGenerales.objects.create(
                 id_gasto_operacion=gasto_operacion,
+                totalgastosgenerales=data.get("totalgastosgenerales", 0),
                 total=data.get("total", 0),
-                creado_por=usuario,
             )
 
             serializer = self.get_serializer(gasto_general)
@@ -838,6 +875,8 @@ class GastosGeneralesViewSet(viewsets.ModelViewSet):
                         {"error": "GastoOperacion no encontrado"},
                         status=status.HTTP_400_BAD_REQUEST,
                     )
+            if "totalgastosgenerales" in data:
+                instance.totalgastosgenerales = data["totalgastosgenerales"]
 
             if "total" in data:
                 instance.total = data["total"]
@@ -870,9 +909,18 @@ class GastosGeneralesViewSet(viewsets.ModelViewSet):
             GastosGenerales.objects
             .filter(id_gasto_operacion__identificador__id_proyecto=proyecto_id)
             .values('id_gasto_operacion')
-            .annotate(total=Max('total'))
+            .annotate(
+                totalgastosgenerales=Max('totalgastosgenerales'),
+                total=Max('total')
+            )
         )
 
-        # Devolver mapa id_gasto_operacion -> total
-        result = {str(t['id_gasto_operacion']): t['total'] for t in totals_qs}
+        # Devolver mapa id_gasto_operacion -> totalgastosgenerales y total
+        result = {
+            str(t['id_gasto_operacion']): {
+                "totalgastosgenerales": t['totalgastosgenerales'],
+                "total": t['total']
+            }
+            for t in totals_qs
+        }
         return Response(result)

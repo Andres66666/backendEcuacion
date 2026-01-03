@@ -13,6 +13,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework_simplejwt.tokens import RefreshToken
+import cloudinary
 
 import cloudinary
 # =================== MODELOS ===================
@@ -27,7 +28,6 @@ from .models import (
     Usuario,
     UsuarioRol,
 )
-
 # =================== SERIALIZERS ===================
 from .serializers import (
     LoginSerializer,
@@ -211,9 +211,7 @@ class Verificar2FAView(APIView):
     def post(self, request):
         usuario_id = request.data.get("usuario_id")
         codigo = request.data.get("codigo")
-        metodo = request.data.get(
-            "metodo"
-        )  # ← MODIFICADO: Recibe 'metodo' del frontend ("correo" o "totp")
+        metodo = request.data.get("metodo")
 
         try:
             usuario = Usuario.objects.get(id=usuario_id)
@@ -223,9 +221,7 @@ class Verificar2FAView(APIView):
         if not metodo or metodo not in ["correo", "totp"]:
             return Response(
                 {"error": "Método 2FA inválido"}, status=400
-            )  # ← MODIFICADO: Valida metodo
-
-        # ← MODIFICADO: Verificar según 'metodo' elegido (no tipo_2fa fijo)
+            )
         if metodo == "correo":
             codigo_obj = (
                 Codigo2FA.objects.filter(usuario=usuario, codigo=codigo, expirado=False)
@@ -278,7 +274,7 @@ class GenerarQRView(APIView):
                 status=200,
             )
         except Exception as e:
-            print("🧨 ERROR EN GENERAR QR:")
+            print("ERROR EN GENERAR QR:")
             print(traceback.format_exc())
             return Response({"error": str(e)}, status=500)
 
@@ -710,7 +706,6 @@ class RolPermisoViewSet(viewsets.ModelViewSet):
         
         permisos_asignados = RolPermiso.objects.filter(rol_id=rol_id).values_list('permiso_id', flat=True)
         return Response(list(permisos_asignados))
-
 
 class RegistroClienteView(APIView): 
     authentication_classes = []

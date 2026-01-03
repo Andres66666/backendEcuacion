@@ -1,0 +1,159 @@
+
+class ProyectoViewSet(viewsets.ModelViewSet):
+    queryset = Proyecto.objects.all()
+    serializer_class = ProyectoSerializer
+    
+
+    # =====================================================
+    # CREATE
+    # =====================================================
+    def create(self, request, *args, **kwargs):
+        data = request.data.copy()
+
+        try:
+            # 🔹 Determinar usuario (auth o fallback)
+            if request.user.is_authenticated:
+                usuario = request.user
+            else:
+                usuario_id = data.get("creado_por")
+                if not usuario_id:
+                    return Response(
+                        {"error": "Usuario no identificado"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                usuario = Usuario.objects.get(id=usuario_id)
+
+            nombre_proyecto = data.get("NombreProyecto", "").strip()
+            if not nombre_proyecto:
+                return Response(
+                    {"error": "El campo NombreProyecto es obligatorio."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # 🔹 Verificar duplicado SOLO para ese usuario
+            existente = Proyecto.objects.filter(
+                NombreProyecto__iexact=nombre_proyecto,
+                creado_por=usuario,
+            ).first()
+
+            if existente:
+                return Response(
+                    {
+                        "mensaje": "Ya existe un proyecto con este nombre.",
+                        "id_proyecto": existente.id_proyecto,
+                        "NombreProyecto": existente.NombreProyecto,
+                        "carga_social": existente.carga_social,
+                        "iva_efectiva": existente.iva_efectiva,
+                        "herramientas": existente.herramientas,
+                        "gastos_generales": existente.gastos_generales,
+                        "iva_tasa_nominal": existente.iva_tasa_nominal,
+                        "it": existente.it,
+                        "iue": existente.iue,
+                        "ganancia": existente.ganancia,
+                        "margen_utilidad": existente.margen_utilidad,
+                    },
+                    status=status.HTTP_200_OK,
+                )
+
+            proyecto = Proyecto.objects.create(
+                NombreProyecto=nombre_proyecto,
+                carga_social=data.get("carga_social", 0),
+                iva_efectiva=data.get("iva_efectiva", 0),
+                herramientas=data.get("herramientas", 0),
+                gastos_generales=data.get("gastos_generales", 0),
+                iva_tasa_nominal=data.get("iva_tasa_nominal", 0),
+                it=data.get("it", 0),
+                iue=data.get("iue", 0),
+                ganancia=data.get("ganancia", 0),
+                margen_utilidad=data.get("margen_utilidad", 0),
+                creado_por=usuario,
+            )
+
+            serializer = self.get_serializer(proyecto)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        except Usuario.DoesNotExist:
+            return Response(
+                {"error": "Usuario no encontrado"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    # =====================================================
+    # UPDATE
+    # =====================================================
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        data = request.data.copy()
+
+        for field in [
+            "NombreProyecto",
+            "carga_social",
+            "iva_efectiva",
+            "herramientas",
+            "gastos_generales",
+            "iva_tasa_nominal",
+            "it",
+            "iue",
+            "ganancia",
+            "margen_utilidad",
+        ]:
+            if field in data:
+                setattr(
+                    instance,
+                    field,
+                    data[field].strip()
+                    if field == "NombreProyecto"
+                    else data[field],
+                )
+
+        instance.save()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+    # =====================================================
+    # GET QUERYSET
+    # =====================================================
+    def get_queryset(self):
+        queryset = super().get_queryset()
+
+        if self.request.user.is_authenticated:
+            return queryset.filter(creado_por=self.request.user)
+
+        usuario_id = self.request.query_params.get("usuario_id")
+        if usuario_id:
+            return queryset.filter(creado_por_id=usuario_id)
+
+        return queryset.none()
+
+    # =====================================================
+    # DESTROY
+    # =====================================================
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        from .models import (
+            GastoOperacion,
+            Materiales,
+            ManoDeObra,
+            EquipoHerramienta,
+            GastosGenerales,
+        )
+
+        gastos = GastoOperacion.objects.filter(identificador=instance)
+
+        for gasto in gastos:
+            Materiales.objects.filter(id_gasto_operacion=gasto).delete()
+            ManoDeObra.objects.filter(id_gasto_operacion=gasto).delete()
+            EquipoHerramienta.objects.filter(id_gasto_operacion=gasto).delete()
+            GastosGenerales.objects.filter(id_gasto_operacion=gasto).delete()
+            gasto.delete()
+
+        instance.delete()
+
+        return Response(
+            {
+                "mensaje": "Proyecto y todos sus registros asociados fueron eliminados correctamente."
+            },
+            status=status.HTTP_204_NO_CONTENT,
+        )
+
+

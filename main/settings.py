@@ -70,12 +70,12 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # Middlewares personalizados Aporte 
     
-    "GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseCryptoMiddleware",
-    "GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseCryptoMiddleware",
-    "GuardianUnivalle_Benito_Yucra.detectores.detector_csrf.CSRFDefenseMiddleware",
-    "GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware", 
+    # "GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseCryptoMiddleware",
+    # "GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseCryptoMiddleware",
+    # "GuardianUnivalle_Benito_Yucra.detectores.detector_csrf.CSRFDefenseMiddleware",
+    # "GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware", 
     #
-    "users.middleware.AuditoriaMiddleware",
+    # "users.middleware.AuditoriaMiddleware",
     
 ]
 
@@ -107,7 +107,7 @@ WSGI_APPLICATION = "main.wsgi.application"
 # =====================================================
 # === 5. BASE DE DATOS ================================
 # =====================================================
-DATABASES = {
+""" DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": "Ecuacion",
@@ -116,18 +116,18 @@ DATABASES = {
         "HOST": "localhost",
         "PORT": "5432",
     }
-}  
+}  """ 
 
-""" DATABASES = {
+DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": "ecuacion_vycn",
-        "USER": "ecuacion_vycn_user",
-        "PASSWORD": "9froj4SL2YZL3jzZnIbN5VYLVwFZZHLF",
-        "HOST": "dpg-d45et32dbo4c73frsu80-a.oregon-postgres.render.com",
+        "NAME": "ecuacion_inxs",
+        "USER": "ecuacion_inxs_user",
+        "PASSWORD": "mLbGeA7ZCNQqcuOdzcn3MvW6kRGbcXZR",
+        "HOST": "dpg-d5cjelggjchc73cse8r0-a.oregon-postgres.render.com",
         "PORT": "5432",
     }
-}  """
+} 
 
 # =====================================================
 # === 6. CONFIGURACIÓN DE AUTH Y PASSWORDS ============
@@ -182,8 +182,8 @@ EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = "mallafinitasrl@gmail.com"
-EMAIL_HOST_PASSWORD = "qvqloiqnernykmja" 
+EMAIL_HOST_USER = "benitoandrescalle035@gmail.com"
+EMAIL_HOST_PASSWORD = "kpqhdiqqazmdchtc" 
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 # =====================================================
