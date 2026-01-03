@@ -20,3 +20,5 @@ qrcode[pil]
 Pillow
 user-agents
 cryptography==41.0.3
+argon2-cffi==23.2.0
+
