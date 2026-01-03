@@ -323,7 +323,9 @@ class GastoOperacionViewSet(viewsets.ModelViewSet):
                 .prefetch_related('gastosgenerales_set')  # Carga anticipada de gastos generales
                 .annotate(
                     total_gastos_generales=Max('gastosgenerales__total')
-                ))
+                )
+                .order_by('modulo_id', 'id')
+                )
         return queryset
 
     @action(detail=False, methods=["get"])
