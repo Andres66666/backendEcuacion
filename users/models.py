@@ -238,7 +238,7 @@ class Materiales(models.Model):
     id_gasto_operacion = models.ForeignKey(GastoOperacion, on_delete=models.CASCADE)
     descripcion = models.CharField(max_length=255)
     unidad = models.CharField(max_length=50)
-    cantidad = models.DecimalField(max_digits=10, decimal_places=2)
+    cantidad = models.DecimalField(max_digits=10, decimal_places=5)
     precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
     total = models.DecimalField(max_digits=12, decimal_places=2)
     def __str__(self):
@@ -249,7 +249,7 @@ class ManoDeObra(models.Model):
     id_gasto_operacion = models.ForeignKey(GastoOperacion, on_delete=models.CASCADE)
     descripcion = models.CharField(max_length=255)
     unidad = models.CharField(max_length=50)
-    cantidad = models.DecimalField(max_digits=10, decimal_places=2)
+    cantidad = models.DecimalField(max_digits=10, decimal_places=5)
     precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
     total = models.DecimalField(max_digits=12, decimal_places=2)
     def __str__(self):
@@ -260,7 +260,7 @@ class EquipoHerramienta(models.Model):
     id_gasto_operacion = models.ForeignKey(GastoOperacion, on_delete=models.CASCADE)
     descripcion = models.CharField(max_length=255)
     unidad = models.CharField(max_length=50)
-    cantidad = models.DecimalField(max_digits=10, decimal_places=2)
+    cantidad = models.DecimalField(max_digits=10, decimal_places=5)
     precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
     total = models.DecimalField(max_digits=12, decimal_places=2)
 
