@@ -123,6 +123,7 @@ def recalcular_proyecto_completo(proyecto: Proyecto) -> int:
         recalcular_item_gastos_generales(item)
         count += 1
     return count
+
 # =====================================================
 # === =============  seccion 2   === ==================
 # =====================================================
@@ -337,6 +338,7 @@ class ProyectoViewSet(viewsets.ModelViewSet):
             recalcular_proyecto(proyecto)  # ✅ objeto, no id
 
         return Response(self.get_serializer(proyecto).data, status=status.HTTP_200_OK)
+
 class ModuloViewSet(viewsets.ModelViewSet):
     queryset = Modulo.objects.all()
     serializer_class = ModuloSerializer
@@ -479,7 +481,6 @@ class ModuloViewSet(viewsets.ModelViewSet):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-
 class GastoOperacionViewSet(viewsets.ModelViewSet):
     queryset = GastoOperacion.objects.all()
     serializer_class = GastoOperacionSerializer
@@ -522,12 +523,6 @@ class GastoOperacionViewSet(viewsets.ModelViewSet):
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
-        """
-        Permite:
-        - crear 1 item (dict)
-        - crear varios items (list)  => bulk
-        Requiere: modulo_id en cada item (según tu serializer).
-        """
         data = request.data
 
         def _crear_uno(payload: dict):
@@ -536,11 +531,9 @@ class GastoOperacionViewSet(viewsets.ModelViewSet):
 
             item: GastoOperacion = serializer.save()
 
-            # costo_parcial (si quieres mantenerlo)
             item.costo_parcial = redondear2(to_decimal(item.cantidad) * to_decimal(item.precio_unitario))
             item.save(update_fields=["costo_parcial"])
 
-            # crear/actualizar gastos generales del item (al inicio será con subtotales 0 en hijos)
             recalcular_item_gastos_generales(item)
 
             return self.get_serializer(item).data
@@ -561,9 +554,6 @@ class GastoOperacionViewSet(viewsets.ModelViewSet):
 
     @transaction.atomic
     def update(self, request, *args, **kwargs):
-        """
-        Si cambian cantidad / precio_unitario => actualizar costo_parcial y recalcular gastos generales del item.
-        """
         instance: GastoOperacion = self.get_object()
 
         # seguridad (dueño)
@@ -604,10 +594,6 @@ class GastoOperacionViewSet(viewsets.ModelViewSet):
 
     @transaction.atomic
     def destroy(self, request, *args, **kwargs):
-        """
-        Borra un item y por CASCADE borra sus hijos.
-        Luego recalcula el proyecto completo (porque cambió el conjunto).
-        """
         instance: GastoOperacion = self.get_object()
 
         if getattr(request, "user", None) and request.user.is_authenticated:
@@ -628,10 +614,6 @@ class GastoOperacionViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"])
     def ultimos_precios(self, request):
-        """
-        Devuelve último precio_unitario por descripcion dentro del proyecto.
-        ?proyecto=<id_proyecto>
-        """
         proyecto_id = request.query_params.get("proyecto")
         if not proyecto_id or proyecto_id == "undefined":
             return Response({"error": "proyecto requerido"}, status=400)
@@ -656,14 +638,6 @@ class GastoOperacionViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["post"])
     @transaction.atomic
     def actualizar_precio_descripcion(self, request):
-        """
-        Actualiza precio_unitario en TODOS los items del proyecto con esa descripcion
-        y recalcula SOLO esos items afectados.
-        body:
-          - proyecto: id_proyecto
-          - descripcion: str
-          - precio_unitario: number
-        """
         proyecto_id = request.data.get("proyecto")
         descripcion = (request.data.get("descripcion") or "").strip()
         nuevo_precio = request.data.get("precio_unitario")
@@ -715,12 +689,6 @@ class GastoOperacionViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["post"])
     @transaction.atomic
     def mover_item(self, request):
-        """
-        Mueve un item a otro módulo (dentro del mismo proyecto)
-        body:
-          - item_id
-          - modulo_destino_id
-        """
         item_id = request.data.get("item_id")
         modulo_destino_id = request.data.get("modulo_destino_id")
 
@@ -752,13 +720,6 @@ class GastoOperacionViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["post"])
     @transaction.atomic
     def duplicar_item(self, request):
-        """
-        Duplica un item a otro módulo (mismo proyecto),
-        duplicando Materiales/ManoDeObra/EquipoHerramienta y GastosGenerales.
-        body:
-          - item_id
-          - modulo_destino_id
-        """
         item_id = request.data.get("item_id")
         modulo_destino_id = request.data.get("modulo_destino_id")
 

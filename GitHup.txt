@@ -54,9 +54,9 @@ git checkout -b Produccion
 git push -u origin Produccion
 
 
-git pull origin main
+git pull origin master
 git fetch --all
-git reset --hard origin/main
+git reset --hard origin/master
 
 
 """ DATABASES = {
