@@ -1,7 +1,8 @@
-## settings.py - Configuración principal de Django para el proyecto "backendEcuacion". Contiene ajustes de seguridad, bases de datos, aplicaciones, middlewares y defensas contra ataques comunes (SQLi, XSS, CSRF, DoS) usando el paquete GuardianUnivalle-Benito-Yucra.
+## settings.py - Configuración principal de Django para el proyecto "backendEcuacion".
 from pathlib import Path
 from datetime import timedelta
 import os
+
 from decouple import config
 import cloudinary
 from argon2.low_level import Type as Argon2Type
@@ -21,19 +22,15 @@ ALLOWED_HOSTS = [
     "localhost",
     "mallafinita.netlify.app",
     "backendecuacion.onrender.com",
-    "3bd9-2800-320-c8b4-7a00-5ca2-3427-eee3-f068.ngrok-free.app"
-
+    "3bd9-2800-320-c8b4-7a00-5ca2-3427-eee3-f068.ngrok-free.app",
 ]
-#    "mallafinita.netlify.app",
-#   "backendecuacion.onrender.com",
-#"3bd9-2800-320-c8b4-7a00-5ca2-3427-eee3-f068.ngrok-free.app"
 
 APPEND_SLASH = True  # Redirige URLs sin barra final (opcional)
 
 # =====================================================
 # === 2. APLICACIONES INSTALADAS ======================
 # =====================================================
-    
+
 INSTALLED_APPS = [
     # Django apps básicas
     "django.contrib.admin",
@@ -72,19 +69,16 @@ MIDDLEWARE = [
     # Mensajes y UI
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    # Middlewares personalizados Aporte 
 
-
+    # --- Middlewares GuardianUnivalle ---
     "GuardianUnivalle_Benito_Yucra.detectores.detector_csrf.CSRFDefenseMiddleware",
     "GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseCryptoMiddleware",
     "GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseCryptoMiddleware",
+    "GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware",
 
-    "GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware", 
-    #
+    # Auditoría app
     "users.middleware.AuditoriaMiddleware",
-    
 ]
-
 
 # =====================================================
 # === 4. URLS, TEMPLATES Y APLICACIÓN WSGI ============
@@ -113,16 +107,6 @@ WSGI_APPLICATION = "main.wsgi.application"
 # =====================================================
 # === 5. BASE DE DATOS ================================
 # =====================================================
-""" DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": "Ecuacion",
-        "USER": "postgres",
-        "PASSWORD": "13247291",
-        "HOST": "localhost",
-        "PORT": "5432",
-    }
-} """
 
 DATABASES = {
     "default": {
@@ -143,9 +127,7 @@ LOGIN_URL = "two_factor:login"
 LOGIN_REDIRECT_URL = "two_factor:profile"
 
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
-    },
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
@@ -189,7 +171,7 @@ EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = "benitoandrescalle035@gmail.com"
-EMAIL_HOST_PASSWORD = "kpqhdiqqazmdchtc" 
+EMAIL_HOST_PASSWORD = "kpqhdiqqazmdchtc"
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 # =====================================================
@@ -201,7 +183,6 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 MEDIA_URL = "/media/"
-
 DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
 
 CLOUDINARY_STORAGE = {
@@ -227,11 +208,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:4200",
     "https://mallafinita.netlify.app",
     "https://backendecuacion.onrender.com",
-    "https://3bd9-2800-320-c8b4-7a00-5ca2-3427-eee3-f068.ngrok-free.app" 
+    "https://3bd9-2800-320-c8b4-7a00-5ca2-3427-eee3-f068.ngrok-free.app",
 ]
-# "https://mallafinita.netlify.app",
-#"https://backendecuacion.onrender.com",
-#     "https://3bd9-2800-320-c8b4-7a00-5ca2-3427-eee3-f068.ngrok-free.app" 
 
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
 CORS_ALLOW_CREDENTIALS = True
@@ -250,51 +228,59 @@ if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # =====================================================
-# === 13. DEFENSAS (SQLi y XSS) =======================
+# === 13. DEFENSAS (SQLi, XSS, CSRF, DoS) =============
 # =====================================================
-# --- DoS Defense (Avanzado con Score) ---
-DOS_LIMITE_PETICIONES = 120 
+
+# -----------------------
+# DoS Defense (Score)
+# -----------------------
+DOS_LIMITE_PETICIONES = 120
 DOS_VENTANA_SEGUNDOS = 60
-DOS_PESO = 0.6  # Peso para S_dos (Tasa de peticiones)
-DOS_LIMITE_ENDPOINTS = 80 
-DOS_TIEMPO_BLOQUEO = 300 
-DOS_TRUSTED_IPS = ["127.0.0.1","192.168.0.5", ] 
+DOS_TIEMPO_BLOQUEO = 300
 
-# NUEVOS PARÁMETROS DEL SCORE TOTAL:
-DOS_PESO_BLACKLIST = 0.3    # Peso para S_blacklist (IP/CIDR malicioso)
-DOS_PESO_HEURISTICA = 0.1   # Peso para S_heuristica (Headers/Endpoints)
-DOS_UMBRAL_BLOQUEO = 0.8    # Score total (0 a 1.0) para bloquear
+DOS_PESO = 0.6                 # peso del componente tasa -> S_dos
+DOS_LIMITE_ENDPOINTS = 80       # endpoints distintos antes de sumar heurística
 
-# --- SQL Injection Defense ---
-SQLI_DEFENSE_TRUSTED_IPS = [
-    "127.0.0.1",
-    "192.168.0.5",
-]
 
-# --- XSS Defense ---
-XSS_DEFENSE_TRUSTED_IPS = [
-    "127.0.0.1",
-    "192.168.0.5",
-]
+DOS_PESO_BLACKLIST = 0.15        # peso del componente blacklist
+DOS_PESO_HEURISTICA = 0.25       # peso del componente heurística
+DOS_UMBRAL_BLOQUEO = 0.8        # si S_total >= umbral -> bloquear
+
+DOS_WARN_RATIO = 0.75
+DOS_WARN_MIN_SCORE = 0.20
+DOS_WARN_MIN_REQ = 10
+DOS_TRUSTED_IPS = ["127.0.0.1", "192.168.0.5"]
+
+# 👉 NUEVO: para que NO te salga WARNING con score 0.005 (tráfico normal)
+DOS_WARN_RATE_RATIO = 0.75      # ratio de tasa para warning (tasa > limite*ratio)
+DOS_WARN_MIN_SCORE = 0.12       # score mínimo para warning (si S_total < esto, NO warning)
+
+# Threat Intel cache (blacklists externas)
+DOS_BLACKLIST_CACHE_KEY = "dos:blacklist:set"
+DOS_BLACKLIST_REFRESH_SECONDS = 60 * 60 * 6  # 6 horas
+
+# Hash para fingerprint DoS (tu middleware lo usa)
+DOS_DEFENSE_HASH = "SHA256"     # "SHA3" si quieres SHA3-256
+
+# -----------------------
+# SQL Injection Defense
+# -----------------------
+SQLI_DEFENSE_TRUSTED_IPS = ["127.0.0.1", "192.168.0.5"]
+
+# -----------------------
+# XSS Defense
+# -----------------------
+XSS_DEFENSE_TRUSTED_IPS = ["127.0.0.1", "192.168.0.5"]
 XSS_DEFENSE_SANITIZE_INPUT = False
 XSS_DEFENSE_BLOCK = True
 XSS_DEFENSE_EXCLUDED_PATHS = ["/health", "/internal"]
 
-# --- CSRF Defense ---
-CSRF_DEFENSE_TRUSTED_IPS = [
-    "127.0.0.1",
-    "192.168.0.5",
-]
-
+# -----------------------
+# CSRF Defense
+# -----------------------
+CSRF_DEFENSE_TRUSTED_IPS = ["127.0.0.1", "192.168.0.5"]
 CSRF_DEFENSE_BLOCK = True
 CSRF_DEFENSE_LOG = True
-# --- DoS Defense ---
-DOS_DEFENSE_MAX_REQUESTS = 100  # máximo requests por minuto
-DOS_DEFENSE_BLOCK_TIME = 300  # segundos para bloquear IP sospechosa
-DOS_DEFENSE_TRUSTED_IPS = [
-    "127.0.0.1",
-    "192.168.0.5",
-]
 
 # =====================================================
 # === 14. AUTO FIELD Y CONFIGURACIÓN FINAL ============
@@ -302,44 +288,43 @@ DOS_DEFENSE_TRUSTED_IPS = [
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-
-
-# Clave maestra para derivación (base64 de 32 bytes aleatorios )
+# Claves maestras (base64 32 bytes)
 CSRF_DEFENSE_MASTER_KEY = "t9G6OYbT9ldFf/XSKmdsiAQMUmJiD8atbxtRI+SzK/s="
 SQLI_DEFENSE_MASTER_KEY = "t9G6OYbT9ldFf/XSKmdsiAQMUmJiD8atbxtRI+SzK/s="
 XSS_DEFENSE_MASTER_KEY = "t9G6OYbT9ldFf/XSKmdsiAQMUmJiD8atbxtRI+SzK/s="
 
-# Opciones criptográficas
-CSRF_DEFENSE_AEAD = "AESGCM"  # o "CHACHA20" (elige uno; AESGCM es recomendado)
+# Opciones criptográficas CSRF
+CSRF_DEFENSE_AEAD = "AESGCM"  # o "CHACHA20"
 CSRF_DEFENSE_ARGON2 = {
     "time_cost": 2,
     "memory_cost": 65536,
     "parallelism": 1,
     "hash_len": 32,
-    "type": Argon2Type.ID, 
+    "type": Argon2Type.ID,
 }
 CSRF_DEFENSE_HASH = "SHA256"  # o "SHA3"
-# Etiquetas para derivación de claves 
+
 CSRF_HMAC_LABEL = b"csrfdefense-hmac"
 CSRF_AEAD_LABEL = b"csrfdefense-aead"
-# Otras configuraciones 
-CSRF_DEFENSE_MIN_SIGNALS = 1  # Mínimo de señales para marcar como ataque
-CSRF_DEFENSE_EXCLUDED_API_PREFIXES = ["/api/"]  # Excluir rutas API
-CSRF_DEFENSE_TRUSTED_IPS = ["127.0.0.1", "192.168.0.5"]  # IPs confiables 
-CSRF_DEFENSE_EXCLUDED_PATHS = []  # Rutas excluidas
-CSRF_DEFENSE_WEIGHT = 0.2  # Peso para el score de señales
-# =====================================
-# URL DEL FRONTEND PARA VERIFICACIONES
-# =====================================
+
+CSRF_DEFENSE_MIN_SIGNALS = 1
+CSRF_DEFENSE_EXCLUDED_API_PREFIXES = ["/api/"]
+CSRF_DEFENSE_EXCLUDED_PATHS = []
+CSRF_DEFENSE_WEIGHT = 0.2
+
+# Frontend
 FRONTEND_URL = "http://localhost:4200"
+
+# Cache prefix
 CACHE_MIDDLEWARE_KEY_PREFIX = "mallafinita"
 
+# Redis cache
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": os.getenv(
             "REDIS_URL",
-            "redis://default:wE7lakzG2ngqg8pa6VAHbBG5WLl5EYSA@redis-13312.c253.us-central1-1.gce.cloud.redislabs.com:13312/0"
+            "redis://default:wE7lakzG2ngqg8pa6VAHbBG5WLl5EYSA@redis-13312.c253.us-central1-1.gce.cloud.redislabs.com:13312/0",
         ),
         "OPTIONS": {
             "PASSWORD": os.getenv("REDIS_PASSWORD", None),
