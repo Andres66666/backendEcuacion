@@ -7,9 +7,9 @@ from decouple import config
 import cloudinary
 from argon2.low_level import Type as Argon2Type
 
-# =====================================================
+# ====================================================
 # === 1. RUTAS BASE Y CLAVES DE SEGURIDAD ============
-# =====================================================
+# ====================================================
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -17,7 +17,7 @@ SECRET_KEY = "django-insecure-(fn$sd-g@*)51f7)nc!a^3xeb(ma^9f6pm02_a+2h6tw^251fq
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    "192.168.0.5",
+    "192.168.1.3",
     "127.0.0.1",
     "localhost",
     "mallafinita.netlify.app",
@@ -71,11 +71,14 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 
     # --- Middlewares GuardianUnivalle ---
-    "GuardianUnivalle_Benito_Yucra.detectores.detector_csrf.CSRFDefenseMiddleware",
     "GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseCryptoMiddleware",
     "GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseCryptoMiddleware",
+    "GuardianUnivalle_Benito_Yucra.detectores.detector_csrf.CSRFDefenseMiddleware",    
     "GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware",
 
+
+
+    
     # Auditoría app
     "users.middleware.AuditoriaMiddleware",
 ]
@@ -118,7 +121,16 @@ DATABASES = {
         "PORT": "5432",
     }
 }
-
+""" DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "Ecuacion",
+        "USER": "postgres",
+        "PASSWORD": "13247291",
+        "HOST": "localhost",
+        "PORT": "5432",
+    }
+} """
 # =====================================================
 # === 6. CONFIGURACIÓN DE AUTH Y PASSWORDS ============
 # =====================================================
@@ -238,39 +250,36 @@ DOS_LIMITE_PETICIONES = 120
 DOS_VENTANA_SEGUNDOS = 60
 DOS_TIEMPO_BLOQUEO = 300
 
-DOS_PESO = 0.6                 # peso del componente tasa -> S_dos
-DOS_LIMITE_ENDPOINTS = 80       # endpoints distintos antes de sumar heurística
+DOS_PESO = 0.6              
+DOS_LIMITE_ENDPOINTS = 80       
 
 
-DOS_PESO_BLACKLIST = 0.15        # peso del componente blacklist
-DOS_PESO_HEURISTICA = 0.25       # peso del componente heurística
-DOS_UMBRAL_BLOQUEO = 0.8        # si S_total >= umbral -> bloquear
+DOS_PESO_BLACKLIST = 0.15      
+DOS_PESO_HEURISTICA = 0.25     
+DOS_UMBRAL_BLOQUEO = 0.8       
 
 DOS_WARN_RATIO = 0.75
 DOS_WARN_MIN_SCORE = 0.20
 DOS_WARN_MIN_REQ = 10
-DOS_TRUSTED_IPS = ["127.0.0.1", "192.168.0.5"]
+DOS_TRUSTED_IPS = ["127.0.0.1", "192.168.1.3"]
 
-# 👉 NUEVO: para que NO te salga WARNING con score 0.005 (tráfico normal)
-DOS_WARN_RATE_RATIO = 0.75      # ratio de tasa para warning (tasa > limite*ratio)
-DOS_WARN_MIN_SCORE = 0.12       # score mínimo para warning (si S_total < esto, NO warning)
+DOS_WARN_RATE_RATIO = 0.75      
+DOS_WARN_MIN_SCORE = 0.12      
 
-# Threat Intel cache (blacklists externas)
 DOS_BLACKLIST_CACHE_KEY = "dos:blacklist:set"
-DOS_BLACKLIST_REFRESH_SECONDS = 60 * 60 * 6  # 6 horas
+DOS_BLACKLIST_REFRESH_SECONDS = 60 * 60 * 6  
 
-# Hash para fingerprint DoS (tu middleware lo usa)
-DOS_DEFENSE_HASH = "SHA256"     # "SHA3" si quieres SHA3-256
+DOS_DEFENSE_HASH = "SHA256"     
 
 # -----------------------
 # SQL Injection Defense
 # -----------------------
-SQLI_DEFENSE_TRUSTED_IPS = ["127.0.0.1", "192.168.0.5"]
+SQLI_DEFENSE_TRUSTED_IPS = ["127.0.0.1", "192.168.1.3"]
 
 # -----------------------
 # XSS Defense
 # -----------------------
-XSS_DEFENSE_TRUSTED_IPS = ["127.0.0.1", "192.168.0.5"]
+XSS_DEFENSE_TRUSTED_IPS = ["127.0.0.1", "192.168.1.3"]
 XSS_DEFENSE_SANITIZE_INPUT = False
 XSS_DEFENSE_BLOCK = True
 XSS_DEFENSE_EXCLUDED_PATHS = ["/health", "/internal"]
@@ -278,7 +287,7 @@ XSS_DEFENSE_EXCLUDED_PATHS = ["/health", "/internal"]
 # -----------------------
 # CSRF Defense
 # -----------------------
-CSRF_DEFENSE_TRUSTED_IPS = ["127.0.0.1", "192.168.0.5"]
+CSRF_DEFENSE_TRUSTED_IPS = ["127.0.0.1", "192.168.1.3"]
 CSRF_DEFENSE_BLOCK = True
 CSRF_DEFENSE_LOG = True
 
@@ -308,9 +317,12 @@ CSRF_HMAC_LABEL = b"csrfdefense-hmac"
 CSRF_AEAD_LABEL = b"csrfdefense-aead"
 
 CSRF_DEFENSE_MIN_SIGNALS = 1
-CSRF_DEFENSE_EXCLUDED_API_PREFIXES = ["/api/"]
+CSRF_DEFENSE_EXCLUDED_API_PREFIXES = []
+
 CSRF_DEFENSE_EXCLUDED_PATHS = []
 CSRF_DEFENSE_WEIGHT = 0.2
+CSRF_DEFENSE_BLOCK_REQUIRE_ORIGIN_MISMATCH = True
+CSRF_DEFENSE_BLOCK_SCORE = 0.35
 
 # Frontend
 FRONTEND_URL = "http://localhost:4200"
