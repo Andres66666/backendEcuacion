@@ -98,8 +98,6 @@ class LoginView(APIView):
 
                     usuario.save()
 
-                   
-
                     return Response({"error": mensaje_error, "tipo_mensaje": "error"}, status=status.HTTP_400_BAD_REQUEST)
                 else:
                     return Response(
@@ -107,7 +105,6 @@ class LoginView(APIView):
                         status=status.HTTP_400_BAD_REQUEST,
                     )
 
-            # LOGIN EXITOSO: Reset contadores
             usuario.intentos_fallidos = 0
             usuario.logins_exitosos += 1
             usuario.ultimo_intento = timezone.now()
@@ -189,7 +186,6 @@ class LoginView(APIView):
             }, status=status.HTTP_200_OK)
 
         except Usuario.DoesNotExist:
-            # Registrar intento de ataque o usuario no existente
             try:
                 Atacante.objects.create(
                     ip=request.META.get("REMOTE_ADDR"),
@@ -237,7 +233,6 @@ class Verificar2FAView(APIView):
             if not usuario.verificar_codigo_totp(codigo):
                 return Response({"error": "Código TOTP incorrecto"}, status=400)
 
-        # Generar token JWT definitivo
         refresh = RefreshToken.for_user(usuario)
         access_token = str(refresh.access_token)
 
@@ -289,7 +284,6 @@ class EnviarCodigoCorreoView(APIView):
         except Usuario.DoesNotExist:
             return Response({"error": "Usuario no encontrado"}, status=404)
 
-        # Buscar el código más reciente no expirado o crear uno nuevo
         codigo_obj = (
             Codigo2FA.objects.filter(usuario=usuario, expirado=False)
             .order_by("-creado_en")
@@ -301,13 +295,11 @@ class EnviarCodigoCorreoView(APIView):
             codigo = get_random_string(6, allowed_chars="0123456789")
             Codigo2FA.objects.create(usuario=usuario, codigo=codigo)
 
-        # Envío de correo (requerirá configuración SMTP o proveedor)
         subject = "Código de verificación"
         message = f"Hola {usuario.nombre}, tu código es: {codigo} (válido 5 minutos)."
         try:
             send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [usuario.correo])
         except Exception as e:
-            # En dev puede fallar si no configuras SMTP; lo imprimimos y retornamos OK para pruebas
             print("[EnviarCodigoCorreo] No se pudo enviar email:", e)
 
         return Response({"mensaje": "Código enviado"}, status=200)
@@ -322,17 +314,17 @@ class ResetPasswordView(APIView):
             usuario = Usuario.objects.get(correo=correo)
         except Usuario.DoesNotExist:
             return Response({"error": "Usuario no encontrado"}, status=404)
-        temp_pass = get_random_string(10)  # Genera temporal
-        # ← MODIFICADO: No actualizar password aún; guardar en token temporal
+        temp_pass = get_random_string(10)  
+
         token = uuid.uuid4()
         TempPasswordReset.objects.create(
             usuario=usuario,
             token=token,
-            temp_password=temp_pass,  # Plana para verificación (o encripta si prefieres)
+            temp_password=temp_pass,
             usado=False,
             expirado=False,
         )
-        # Envío de correo con temp_pass
+
         subject = "Restablecimiento de contraseña temporal"
         message = f"Hola {usuario.nombre}, tu contraseña temporal es: {temp_pass}. Úsala para restablecer tu contraseña en el sistema. Válida por 15 minutos."
         try:
@@ -342,12 +334,12 @@ class ResetPasswordView(APIView):
             )
         except Exception as e:
             print(f"[ResetPassword] Error email: {e}")
-            # No falla la respuesta; asume enviado (o maneja rollback si quieres)
+            
         return Response(
             {
                 "mensaje": "Se envió un correo con la contraseña temporal. Ingresa el código recibido para continuar.",
                 "usuario_id": usuario.id,
-                "temp_token": str(token),  # ← NUEVO: Retorna token para frontend
+                "temp_token": str(token), 
             },
             status=200,
         )
@@ -372,8 +364,7 @@ class VerificarTempPasswordView(APIView):
             return Response({"error": "Token expirado o ya usado"}, status=400)
         if (
             token_obj.temp_password != temp_pass
-        ):  # ← Verifica contra la temp_pass guardada
-            # Opcional: Contar intentos y bloquear después de 3
+        ):  
             return Response({"error": "Contraseña temporal incorrecta"}, status=400)
         return Response(
             {
@@ -565,7 +556,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         nuevo_estado = data.get("estado", instance.estado)  # Usa actual si no se envía
         reactivacion = (
             not instance.estado
-        ) and nuevo_estado  # ← NUEVO: Solo si era False y ahora True
+        ) and nuevo_estado  # ← Solo si era False y ahora True
 
         # Eliminar archivo accidental
         if "imagen_url" in request.FILES:
@@ -714,80 +705,110 @@ class RegistroClienteView(APIView):
     def post(self, request):
         data = request.data
 
-        # 1️⃣ Campos obligatorios
         campos_requeridos = [
-            "nombre", "apellido", "fecha_nacimiento", "telefono",
-            "correo", "password", "ci"
+            "nombre",
+            "apellido",
+            "fecha_nacimiento",
+            "telefono",
+            "correo",
+            "password",
+            "ci",
         ]
 
         for campo in campos_requeridos:
             if campo not in data or not str(data[campo]).strip():
                 return Response(
                     {"error": f"El campo '{campo}' es obligatorio"},
-                    status=400
+                    status=status.HTTP_400_BAD_REQUEST
                 )
 
-        # 2️⃣ Verificar que exista un registro pendiente verificado
+        correo = data["correo"].strip()
+        ci = data["ci"].strip()
+
         registro_pendiente = RegistroPendiente.objects.filter(
-            correo=data["correo"], verificado=True
-        ).order_by('-creado_en').first()
+            correo=correo,
+            verificado=True
+        ).order_by("-creado_en").first()
 
         if not registro_pendiente:
-            return Response({"error": "Debes verificar tu correo antes de registrar"}, status=400)
+            return Response(
+                {"error": "Debes verificar tu correo antes de registrar"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        # 3️⃣ Validar duplicados reales
-        if Usuario.objects.filter(correo=data["correo"]).exists():
-            return Response({"error": "El correo ya está registrado"}, status=400)
-        if Usuario.objects.filter(ci=data["ci"]).exists():
-            return Response({"error": "El CI ya está registrado"}, status=400)
+        if Usuario.objects.filter(correo=correo).exists():
+            return Response(
+                {"error": "El correo ya está registrado"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        # 4️⃣ Validar formato de correo
+        if Usuario.objects.filter(ci=ci).exists():
+            return Response(
+                {"error": "El CI ya está registrado"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         try:
-            validate_email(data["correo"])
+            validate_email(correo)
         except ValidationError:
-            return Response({"error": "El correo no tiene un formato válido"}, status=400)
+            return Response(
+                {"error": "El correo no tiene un formato válido"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        # 5️⃣ Validar contraseña
-        if len(data["password"]) < 8:
-            return Response({"error": "La contraseña debe tener al menos 8 caracteres"}, status=400)
+        password = data["password"].strip()
+        if len(password) < 8:
+            return Response(
+                {"error": "La contraseña debe tener al menos 8 caracteres"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        # 6️⃣ Validar fecha de nacimiento
         try:
-            fecha_nac = datetime.strptime(data["fecha_nacimiento"], "%Y-%m-%d").date()
+            fecha_nac = datetime.strptime(
+                data["fecha_nacimiento"], "%Y-%m-%d"
+            ).date()
         except ValueError:
-            return Response({"error": "La fecha debe tener formato YYYY-MM-DD"}, status=400)
+            return Response(
+                {"error": "La fecha debe tener formato YYYY-MM-DD"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        # 7️⃣ Crear usuario
-        usuario = Usuario.objects.create(
-            nombre=data["nombre"].strip(),
-            apellido=data["apellido"].strip(),
-            fecha_nacimiento=fecha_nac,
-            telefono=data["telefono"].strip(),
-            correo=data["correo"].strip(),
-            password=make_password(data["password"]),
-            ci=data["ci"].strip(),
-            estado=True
-        )
-
-        # 8️⃣ Asignar rol Cliente
         try:
-            rol_cliente = Rol.objects.get(nombre__iexact="Cliente")
+            rol_cliente = Rol.objects.get(nombre__iexact="Cliente", estado=True)
         except Rol.DoesNotExist:
-            usuario.delete()
-            return Response({"error": "No existe el rol Cliente"}, status=500)
+            return Response(
+                {"error": "No existe el rol Cliente activo"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
-        UsuarioRol.objects.create(usuario=usuario, rol=rol_cliente)
+        try:
+            usuario = Usuario.objects.create(
+                nombre=data["nombre"].strip(),
+                apellido=data["apellido"].strip(),
+                fecha_nacimiento=fecha_nac,
+                telefono=data["telefono"].strip(),
+                correo=correo,
+                password=password,
+                ci=ci,
+                estado=True
+            )
 
-        # 9️⃣ Asegurar que el rol Cliente tenga permisos asignados
-        # Por ejemplo, todos los permisos que correspondan a "Cliente"
-        permisos_cliente = Permiso.objects.filter(nombre__in=["Cliente"])  # Reemplaza con los permisos reales
-        for permiso in permisos_cliente:
-            RolPermiso.objects.get_or_create(rol=rol_cliente, permiso=permiso)
+            UsuarioRol.objects.get_or_create(usuario=usuario, rol=rol_cliente)
 
-        return Response({
-            "mensaje": "Cliente registrado correctamente",
-            "usuario_id": usuario.id
-        }, status=201)
+            return Response(
+                {
+                    "mensaje": "Cliente registrado correctamente",
+                    "usuario_id": usuario.id,
+                    "rol_asignado": rol_cliente.nombre,
+                },
+                status=status.HTTP_201_CREATED
+            )
+
+        except Exception as e:
+            return Response(
+                {"error": f"No se pudo registrar el cliente: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )   
 
 class ValidarCorreoView(APIView):
     authentication_classes = []

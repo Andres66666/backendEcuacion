@@ -1,4 +1,3 @@
-## settings.py - Configuración principal de Django para el proyecto "backendEcuacion".
 from pathlib import Path
 from datetime import timedelta
 import os
@@ -8,7 +7,7 @@ import cloudinary
 from argon2.low_level import Type as Argon2Type
 
 # ====================================================
-# === 1. RUTAS BASE Y CLAVES DE SEGURIDAD ============
+# === 1. RUTAS BASE Y CLAVES DE SEGURIDAD ============ 74707215
 # ====================================================
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -17,22 +16,21 @@ SECRET_KEY = "django-insecure-(fn$sd-g@*)51f7)nc!a^3xeb(ma^9f6pm02_a+2h6tw^251fq
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    "192.168.1.3",
+    "192.168.1.6",
     "127.0.0.1",
     "localhost",
     "mallafinita.netlify.app",
     "backendecuacion.onrender.com",
-    "3bd9-2800-320-c8b4-7a00-5ca2-3427-eee3-f068.ngrok-free.app",
+    "pseudocourteous-jasperated-shavonne.ngrok-free.dev",
 ]
 
-APPEND_SLASH = True  # Redirige URLs sin barra final (opcional)
+APPEND_SLASH = True
 
 # =====================================================
 # === 2. APLICACIONES INSTALADAS ======================
 # =====================================================
 
 INSTALLED_APPS = [
-    # Django apps básicas
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -71,13 +69,13 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 
     # --- Middlewares GuardianUnivalle ---
-    #"GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseCryptoMiddleware",
-    #"GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseCryptoMiddleware",
-    #"GuardianUnivalle_Benito_Yucra.detectores.detector_csrf.CSRFDefenseMiddleware",    
-    #"GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware",
+    # "GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseCryptoMiddleware",
+    # "GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseCryptoMiddleware",
+    # "GuardianUnivalle_Benito_Yucra.detectores.detector_csrf.CSRFDefenseMiddleware",    
+    # "GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware",
     
     # Auditoría app
-    #"users.middleware.AuditoriaMiddleware",
+    # "users.middleware.AuditoriaMiddleware",
 ]
 
 # =====================================================
@@ -217,7 +215,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:4200",
     "https://mallafinita.netlify.app",
     "https://backendecuacion.onrender.com",
-    "https://3bd9-2800-320-c8b4-7a00-5ca2-3427-eee3-f068.ngrok-free.app",
+    "https://pseudocourteous-jasperated-shavonne.ngrok-free.dev",
 ]
 
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
@@ -258,7 +256,7 @@ DOS_UMBRAL_BLOQUEO = 0.8
 DOS_WARN_RATIO = 0.75
 DOS_WARN_MIN_SCORE = 0.20
 DOS_WARN_MIN_REQ = 10
-DOS_TRUSTED_IPS = ["127.0.0.1", "192.168.1.3"]
+DOS_TRUSTED_IPS = ["127.0.0.1", "192.168.1.6"]
 
 DOS_WARN_RATE_RATIO = 0.75      
 DOS_WARN_MIN_SCORE = 0.12      
@@ -271,12 +269,12 @@ DOS_DEFENSE_HASH = "SHA256"
 # -----------------------
 # SQL Injection Defense
 # -----------------------
-SQLI_DEFENSE_TRUSTED_IPS = ["127.0.0.1", "192.168.1.3"]
+SQLI_DEFENSE_TRUSTED_IPS = ["127.0.0.1", "192.168.1.6"]
 
 # -----------------------
 # XSS Defense
 # -----------------------
-XSS_DEFENSE_TRUSTED_IPS = ["127.0.0.1", "192.168.1.3"]
+XSS_DEFENSE_TRUSTED_IPS = ["127.0.0.1", "192.168.1.6"]
 XSS_DEFENSE_SANITIZE_INPUT = False
 XSS_DEFENSE_BLOCK = True
 XSS_DEFENSE_EXCLUDED_PATHS = ["/health", "/internal"]
@@ -284,7 +282,7 @@ XSS_DEFENSE_EXCLUDED_PATHS = ["/health", "/internal"]
 # -----------------------
 # CSRF Defense
 # -----------------------
-CSRF_DEFENSE_TRUSTED_IPS = ["127.0.0.1", "192.168.1.3"]
+CSRF_DEFENSE_TRUSTED_IPS = ["127.0.0.1", "192.168.1.6"]
 CSRF_DEFENSE_BLOCK = True
 CSRF_DEFENSE_LOG = True
 
@@ -328,7 +326,7 @@ FRONTEND_URL = "http://localhost:4200"
 CACHE_MIDDLEWARE_KEY_PREFIX = "mallafinita"
 
 # Redis cache
-CACHES = {
+""" CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": os.getenv(
@@ -339,4 +337,4 @@ CACHES = {
             "PASSWORD": os.getenv("REDIS_PASSWORD", None),
         },
     }
-}
+} """

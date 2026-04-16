@@ -1,4 +1,4 @@
-# serializers.py
+
 from rest_framework import serializers
 from .models import (Atacante,GastoOperacion,Modulo,Proyecto,Rol,Permiso,Usuario,RolPermiso,UsuarioRol,Materiales,ManoDeObra,EquipoHerramienta,GastosGenerales,)
 
@@ -7,9 +7,9 @@ class AtacanteSerializer(serializers.ModelSerializer):
         model = Atacante
         fields = "__all__"
 
-# =====================================================
+
 # === =============  seccion 1   === ==================
-# =====================================================
+
 class LoginSerializer(serializers.Serializer):
     correo = serializers.EmailField(max_length=100, required=False, allow_null=True)
     password = serializers.CharField(max_length=255, required=True)
@@ -51,9 +51,9 @@ class RolPermisoSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-# =====================================================
+
 # === =============  seccion 2   === ==================
-# =====================================================
+
 
 class ProyectoSerializer(serializers.ModelSerializer):
     creado_por = serializers.PrimaryKeyRelatedField(read_only=True)

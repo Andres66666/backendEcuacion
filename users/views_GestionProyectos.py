@@ -29,11 +29,6 @@ def to_decimal(valor) -> Decimal:
         return Decimal("0")
 
 def recalcular_item_gastos_generales(item: GastoOperacion) -> GastosGenerales:
-    """
-    Recalcula y guarda el registro de GastosGenerales (1 por item).
-    IMPORTANTE: retorna el objeto GastosGenerales para usarlo en endpoints.
-    """
-
     proyecto = item.modulo.proyecto
 
     gastos_generales_pct = to_decimal(proyecto.gastos_generales or 0)
@@ -97,9 +92,6 @@ def recalcular_item_gastos_generales(item: GastoOperacion) -> GastosGenerales:
 
 
 def recalcular_proyecto(proyecto: Proyecto) -> None:
-    """
-    Recalcula todos los items de un proyecto (sin devolver conteo).
-    """
     items = (
         GastoOperacion.objects
         .filter(modulo__proyecto=proyecto)
@@ -110,9 +102,6 @@ def recalcular_proyecto(proyecto: Proyecto) -> None:
 
 
 def recalcular_proyecto_completo(proyecto: Proyecto) -> int:
-    """
-    Recalcula todos los items y retorna cuántos items fueron recalculados.
-    """
     items = (
         GastoOperacion.objects
         .filter(modulo__proyecto=proyecto)
@@ -124,9 +113,9 @@ def recalcular_proyecto_completo(proyecto: Proyecto) -> int:
         count += 1
     return count
 
-# =====================================================
+
 # === =============  seccion 2   === ==================
-# =====================================================
+
 
 class ProyectoViewSet(viewsets.ModelViewSet):
    
@@ -148,8 +137,6 @@ class ProyectoViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         data = request.data.copy()
-
-        # determinar usuario
         if getattr(request, "user", None) and request.user.is_authenticated:
             usuario = request.user
         else:
@@ -312,7 +299,7 @@ class ProyectoViewSet(viewsets.ModelViewSet):
         proyecto = serializer.save()
 
         if recalcular:
-            recalcular_proyecto(proyecto)  # ✅ objeto, no id
+            recalcular_proyecto(proyecto)
 
         return Response(self.get_serializer(proyecto).data, status=status.HTTP_200_OK)
 
@@ -335,7 +322,7 @@ class ProyectoViewSet(viewsets.ModelViewSet):
         proyecto = serializer.save()
 
         if recalcular:
-            recalcular_proyecto(proyecto)  # ✅ objeto, no id
+            recalcular_proyecto(proyecto)
 
         return Response(self.get_serializer(proyecto).data, status=status.HTTP_200_OK)
 
@@ -358,7 +345,7 @@ class ModuloViewSet(viewsets.ModelViewSet):
             except ValueError:
                 return qs.none()
 
-        # ========= LIST (GET /modulos/?proyecto=) =========
+        
         proyecto_id = self.request.query_params.get("proyecto")
         if not proyecto_id or proyecto_id == "undefined":
             return qs.none()
@@ -471,11 +458,11 @@ class ModuloViewSet(viewsets.ModelViewSet):
             if instance.proyecto.creado_por_id != request.user.id:
                 return Response({"error": "No autorizado"}, status=status.HTTP_403_FORBIDDEN)
 
-        proyecto = instance.proyecto  # ✅ objeto proyecto
+        proyecto = instance.proyecto 
         instance.delete()
 
         try:
-            recalcular_proyecto(proyecto)  # ✅ objeto
+            recalcular_proyecto(proyecto)  
         except Exception:
             pass
 
@@ -584,7 +571,7 @@ class GastoOperacionViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         item: GastoOperacion = serializer.save()
 
-        # si tocaron cantidad o precio_unitario => recalcular costo_parcial
+        
         if ("cantidad" in request.data) or ("precio_unitario" in request.data):
             item.costo_parcial = redondear2(to_decimal(item.cantidad) * to_decimal(item.precio_unitario))
             item.save(update_fields=["costo_parcial"])
@@ -603,7 +590,6 @@ class GastoOperacionViewSet(viewsets.ModelViewSet):
         proyecto = instance.modulo.proyecto
         instance.delete()
 
-        # recalcular todo el proyecto (regla que pediste)
         recalcular_proyecto(proyecto)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -712,7 +698,6 @@ class GastoOperacionViewSet(viewsets.ModelViewSet):
         item.modulo = modulo_destino
         item.save(update_fields=["modulo"])
 
-        # recalcular solo ese item (por si cambian parámetros de proyecto, aquí no cambian)
         recalcular_item_gastos_generales(item)
 
         return Response({"success": True}, status=200)
@@ -820,9 +805,9 @@ class GastoOperacionViewSet(viewsets.ModelViewSet):
         )
         return Response(list(unidades))
 
-# =====================================================
+
 # === =============  seccion 3   === ==================
-# =====================================================
+
 
 class MaterialesViewSet(viewsets.ModelViewSet):
     queryset = Materiales.objects.all().select_related(
@@ -961,7 +946,6 @@ class MaterialesViewSet(viewsets.ModelViewSet):
             if proyecto.creado_por_id != request.user.id:
                 return Response({"error": "No autorizado"}, status=403)
 
-        # ✅ materiales afectados (comparación normalizada: TRIM + UPPER)
         mats = (
             Materiales.objects
             .filter(gasto_operacion__modulo__proyecto=proyecto)
@@ -1135,13 +1119,9 @@ class ManoDeObraViewSet(viewsets.ModelViewSet):
 
         instance: ManoDeObra = self.get_object()
         item = instance.gasto_operacion
-
         instance.delete()
-
         recalcular_item_gastos_generales(item)
-
         return Response(status=status.HTTP_204_NO_CONTENT)
-
 
     
     @action(detail=False, methods=["post"])
@@ -1174,7 +1154,6 @@ class ManoDeObraViewSet(viewsets.ModelViewSet):
             if proyecto.creado_por_id != request.user.id:
                 return Response({"error": "No autorizado"}, status=403)
 
-        # ✅ buscar por descripción normalizada (TRIM + UPPER)
         mos = (
             ManoDeObra.objects
             .filter(gasto_operacion__modulo__proyecto=proyecto)
@@ -1186,10 +1165,8 @@ class ManoDeObraViewSet(viewsets.ModelViewSet):
         if not mos.exists():
             return Response({"success": True, "actualizados": 0}, status=200)
 
-        # guardar ids de items afectados
         items_afectados = set(mos.values_list("gasto_operacion_id", flat=True))
 
-        # actualizar precio y total
         actualizados = 0
         for mo in mos:
             mo.precio_unitario = nuevo_precio
@@ -1197,7 +1174,6 @@ class ManoDeObraViewSet(viewsets.ModelViewSet):
             mo.save(update_fields=["precio_unitario", "total"])
             actualizados += 1
 
-        # recalcular SOLO items afectados
         items = GastoOperacion.objects.filter(id__in=list(items_afectados)).select_related(
             "modulo", "modulo__proyecto"
         )
@@ -1285,7 +1261,6 @@ class EquipoHerramientaViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
 
-        # 🔒 Seguridad por dueño
         if getattr(self.request, "user", None) and self.request.user.is_authenticated:
             qs = qs.filter(
                 gasto_operacion__modulo__proyecto__creado_por=self.request.user
@@ -1302,11 +1277,9 @@ class EquipoHerramientaViewSet(viewsets.ModelViewSet):
                 gasto_operacion__modulo__proyecto__creado_por_id=usuario_id
             )
 
-        # ✅ PERMITIR DETAIL (IMPORTANTE)
         if self.action in ["retrieve", "update", "partial_update", "destroy"]:
             return qs
 
-        # 🔎 Filtros para LIST
         gasto_id = self.request.query_params.get("gasto_operacion")
         proyecto_id = self.request.query_params.get("proyecto")
 
@@ -1334,25 +1307,19 @@ class EquipoHerramientaViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
         equipo: EquipoHerramienta = serializer.save()
-
         equipo.total = redondear2(to_decimal(equipo.cantidad) * to_decimal(equipo.precio_unitario))
         equipo.save(update_fields=["total"])
-
         recalcular_item_gastos_generales(equipo.gasto_operacion)
 
         return Response(self.get_serializer(equipo).data, status=status.HTTP_201_CREATED)
 
     @transaction.atomic
     def update(self, request, *args, **kwargs):
-
         instance: EquipoHerramienta = self.get_object()
-
         serializer = self.get_serializer(instance, data=request.data, partial=False)
         serializer.is_valid(raise_exception=True)
         equipo: EquipoHerramienta = serializer.save()
-
         equipo.total = redondear2(to_decimal(equipo.cantidad) * to_decimal(equipo.precio_unitario))
         equipo.save(update_fields=["total"])
 
@@ -1419,7 +1386,6 @@ class EquipoHerramientaViewSet(viewsets.ModelViewSet):
             if proyecto.creado_por_id != request.user.id:
                 return Response({"error": "No autorizado"}, status=403)
 
-        # ✅ buscar por descripción normalizada (TRIM + UPPER)
         equipos = (
             EquipoHerramienta.objects
             .filter(gasto_operacion__modulo__proyecto=proyecto)

@@ -11,9 +11,9 @@ import pyotp
 from datetime import timedelta
 import uuid
 
-# =====================================================
+
 # === =============  seccion 1   === ==================
-# =====================================================
+
 class Rol(models.Model):
     nombre = models.CharField(max_length=100)
     estado = models.BooleanField(default=True)
@@ -126,7 +126,7 @@ class TempPasswordReset(models.Model):
     token = models.UUIDField(default=uuid.uuid4, unique=True)
     temp_password = models.CharField(
         max_length=128
-    )  # Encriptada o plana (para verificación simple)
+    ) 
     creado_en = models.DateTimeField(auto_now_add=True)
     usado = models.BooleanField(default=False)
     expirado = models.BooleanField(default=False)
@@ -141,7 +141,7 @@ class TempPasswordReset(models.Model):
 
 class RegistroPendiente(models.Model):
     token = models.UUIDField(default=uuid.uuid4, unique=True)
-    datos = models.JSONField()  # Guardamos todos los datos del formulario
+    datos = models.JSONField() 
     correo = models.EmailField()
     creado_en = models.DateTimeField(auto_now_add=True)
     verificado = models.BooleanField(default=False)
@@ -191,7 +191,6 @@ class Modulo(models.Model):
     proyecto = models.ForeignKey(Proyecto,on_delete=models.CASCADE,related_name="modulos")
     codigo = models.CharField(max_length=50)
     nombre = models.CharField(max_length=255)
-    #estado = models.BooleanField(default=True)
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["proyecto", "codigo"],name="uq_modulo_codigo_por_proyecto")]

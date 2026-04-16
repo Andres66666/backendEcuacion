@@ -20,6 +20,9 @@ class Command(BaseCommand):
         asistente_role, _ = Rol.objects.get_or_create(
             nombre="Asistente", defaults={"estado": True}
         )
+        asistente_role, _ = Rol.objects.get_or_create(
+            nombre="Cliente", defaults={"estado": True}
+        )
 
         # --- CREAR PERMISOS ---
         permisos_data = [
@@ -124,7 +127,7 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                "🎉 ¡Base de datos RBAC inicializada exitosamente con roles, permisos y usuarios!"
+                " ¡Base de datos RBAC inicializada exitosamente con roles, permisos y usuarios!"
             )
         )
 

@@ -286,12 +286,12 @@ class Command(BaseCommand):
                 }
             )
             if created:
-                self.stdout.write(f"✅ Atacante creado: {atacante.ip} - {atacante.fecha}")
+                self.stdout.write(f" Atacante creado: {atacante.ip} - {atacante.fecha}")
             else:
-                self.stdout.write(f"ℹ️ Atacante ya existe: {atacante.ip} - {atacante.fecha}")
+                self.stdout.write(f" Atacante ya existe: {atacante.ip} - {atacante.fecha}")
 
         self.stdout.write(
-            self.style.SUCCESS("🎉 ¡Registros de atacantes inicializados exitosamente!")
+            self.style.SUCCESS(" ¡Registros de atacantes inicializados exitosamente!")
         )
 
 # --- INSTRUCCIONES ---

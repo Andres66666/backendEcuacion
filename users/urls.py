@@ -44,6 +44,4 @@ urlpatterns = [
     path("validar-correo/", views_GestionUsuarios.ValidarCorreoView.as_view()),
     path("enviar-verificacion/", views_GestionUsuarios.EnviarVerificacionView.as_view()),
     path("confirmar/<uuid:token>/", views_GestionUsuarios.ConfirmarRegistroView.as_view()),
-
-
 ]
