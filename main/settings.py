@@ -16,7 +16,7 @@ SECRET_KEY = "django-insecure-(fn$sd-g@*)51f7)nc!a^3xeb(ma^9f6pm02_a+2h6tw^251fq
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    "192.168.1.6",
+    "192.168.1.15",
     "127.0.0.1",
     "localhost",
     "mallafinita.netlify.app",
@@ -69,13 +69,13 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 
     # --- Middlewares GuardianUnivalle ---
-    # "GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseCryptoMiddleware",
-    # "GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseCryptoMiddleware",
-    # "GuardianUnivalle_Benito_Yucra.detectores.detector_csrf.CSRFDefenseMiddleware",    
-    # "GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware",
+    "GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseCryptoMiddleware",
+    "GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseCryptoMiddleware",
+    "GuardianUnivalle_Benito_Yucra.detectores.detector_csrf.CSRFDefenseMiddleware",    
+    "GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware",
     
     # Auditoría app
-    # "users.middleware.AuditoriaMiddleware",
+    "users.middleware.AuditoriaMiddleware",
 ]
 
 # =====================================================
@@ -115,7 +115,8 @@ DATABASES = {
         "HOST": "dpg-d6bnv795pdvs73erthr0-a.oregon-postgres.render.com",
         "PORT": "5432",
     }
-}
+} 
+
 """ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -170,7 +171,7 @@ USE_I18N = True
 USE_TZ = True
 
 # =====================================================
-# === 9. CONFIGURACIÓN DE EMAIL =======================
+# === 9. CONFIGURACIÓN DE EMAIL ======================= Contraseñas de aplicaciones
 # =====================================================
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
@@ -178,7 +179,9 @@ EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = "benitoandrescalle035@gmail.com"
-EMAIL_HOST_PASSWORD = "kpqhdiqqazmdchtc"
+EMAIL_HOST_PASSWORD = "frolnsnpgizgmtqh"
+
+
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 # =====================================================
@@ -256,7 +259,7 @@ DOS_UMBRAL_BLOQUEO = 0.8
 DOS_WARN_RATIO = 0.75
 DOS_WARN_MIN_SCORE = 0.20
 DOS_WARN_MIN_REQ = 10
-DOS_TRUSTED_IPS = ["127.0.0.1", "192.168.1.6"]
+DOS_TRUSTED_IPS = ["127.0.0.1", "192.168.1.15"]
 
 DOS_WARN_RATE_RATIO = 0.75      
 DOS_WARN_MIN_SCORE = 0.12      
@@ -269,12 +272,12 @@ DOS_DEFENSE_HASH = "SHA256"
 # -----------------------
 # SQL Injection Defense
 # -----------------------
-SQLI_DEFENSE_TRUSTED_IPS = ["127.0.0.1", "192.168.1.6"]
+SQLI_DEFENSE_TRUSTED_IPS = ["127.0.0.1", "192.168.1.15"]
 
 # -----------------------
 # XSS Defense
 # -----------------------
-XSS_DEFENSE_TRUSTED_IPS = ["127.0.0.1", "192.168.1.6"]
+XSS_DEFENSE_TRUSTED_IPS = ["127.0.0.1", "192.168.1.15"]
 XSS_DEFENSE_SANITIZE_INPUT = False
 XSS_DEFENSE_BLOCK = True
 XSS_DEFENSE_EXCLUDED_PATHS = ["/health", "/internal"]
@@ -282,7 +285,7 @@ XSS_DEFENSE_EXCLUDED_PATHS = ["/health", "/internal"]
 # -----------------------
 # CSRF Defense
 # -----------------------
-CSRF_DEFENSE_TRUSTED_IPS = ["127.0.0.1", "192.168.1.6"]
+CSRF_DEFENSE_TRUSTED_IPS = ["127.0.0.1", "192.168.1.15"]
 CSRF_DEFENSE_BLOCK = True
 CSRF_DEFENSE_LOG = True
 
