@@ -69,13 +69,13 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 
     # --- Middlewares GuardianUnivalle ---
-    "GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseCryptoMiddleware",
-    "GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseCryptoMiddleware",
-    "GuardianUnivalle_Benito_Yucra.detectores.detector_csrf.CSRFDefenseMiddleware",    
-    "GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware",
+    #"GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseCryptoMiddleware",
+    #"GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseCryptoMiddleware",
+    #"GuardianUnivalle_Benito_Yucra.detectores.detector_csrf.CSRFDefenseMiddleware",    
+    #"GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware",
     
     # Auditoría app
-    "users.middleware.AuditoriaMiddleware",
+    #"users.middleware.AuditoriaMiddleware",
 ]
 
 # =====================================================
