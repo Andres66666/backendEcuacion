@@ -15,7 +15,7 @@ from rest_framework.decorators import action
 from rest_framework_simplejwt.tokens import RefreshToken
 import cloudinary
 
-import cloudinary
+
 # =================== MODELOS ===================
 from .models import (
     Atacante,
@@ -146,23 +146,26 @@ class LoginView(APIView):
                         return Response({"error": "Cuenta bloqueada por no cambiar contraseña. Comuníquese con el administrador", "tipo_mensaje": "error"}, status=status.HTTP_403_FORBIDDEN)
 
                 # Control de caducidad
-                dias_transcurridos = None
-                if usuario.fecha_cambio_password:
-                    dias_transcurridos = (timezone.now().date() - usuario.fecha_cambio_password.date()).days
-                else:
-                    dias_transcurridos = (timezone.now().date() - usuario.fecha_creacion.date()).days
-
+                dias_transcurridos = calcular_dias_password(usuario)
+                
                 if dias_transcurridos >= 90:
                     usuario.estado = False
                     usuario.save()
-                    return Response({"error": "Su contraseña ha caducado y su cuenta fue desactivada por incumplimiento de normas.", "tipo_mensaje": "error"}, status=status.HTTP_403_FORBIDDEN)
-                elif dias_transcurridos == 89:
-                    mensaje_adicional = "Debe cambiar su contraseña de forma obligatoria. Día 89."
+                    return Response({
+                        "error": "Su contraseña ha caducado (90 días). Cuenta desactivada.",
+                        "tipo_mensaje": "error"
+                    }, status=status.HTTP_403_FORBIDDEN)
+
+                elif dias_transcurridos >= 89:
+                    mensaje_adicional = "URGENTE: Debe cambiar su contraseña (día 89)."
                     requiere_cambio_password = True
+                    mensaje_urgente = True
+                    tipo_mensaje = "advertencia_urgente"
+
+                elif dias_transcurridos >= 88:
+                    mensaje_adicional = "Advertencia: su contraseña caducará pronto (día 88)."
                     tipo_mensaje = "advertencia"
-                elif dias_transcurridos == 88:
-                    mensaje_adicional = "Advertencia: su contraseña caducará pronto. Día 88."
-                    tipo_mensaje = "advertencia"
+
             else:
                 mensaje_adicional = "Bienvenido, administrador. Acceso completo."
 
@@ -199,6 +202,15 @@ class LoginView(APIView):
                 print("Error guardando ataque:", e)
 
             return Response({"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+
+
+def calcular_dias_password(usuario):
+    if usuario.fecha_cambio_password:
+        fecha_base = usuario.fecha_cambio_password
+    else:
+        fecha_base = usuario.fecha_creacion
+
+    return (timezone.now().date() - fecha_base.date()).days
 
 class Verificar2FAView(APIView):
     authentication_classes = []
@@ -551,7 +563,8 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             data["password"] = make_password(nueva_password)
             data["fecha_cambio_password"] = timezone.now()
             cambio_password = True  # ← NUEVO: Flag para reset
-
+        if reactivacion:
+            instance.fecha_cambio_password = None
         #  Detectar reactivación de usuario (estado False → True) y reset de intentos fallidos
         nuevo_estado = data.get("estado", instance.estado)  # Usa actual si no se envía
         reactivacion = (
