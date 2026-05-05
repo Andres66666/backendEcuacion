@@ -15,7 +15,7 @@ from rest_framework.decorators import action
 from rest_framework_simplejwt.tokens import RefreshToken
 import cloudinary
 
-
+import cloudinary
 # =================== MODELOS ===================
 from .models import (
     Atacante,
@@ -75,7 +75,7 @@ class LoginView(APIView):
                     status=status.HTTP_403_FORBIDDEN,
                 )
 
-            # INTENTOS FALLIDOS (EXENTO PARA ADMIN)
+            # INTENTOS FALLIDOS (ADMIN NO SE BLOQUEA)
             if not check_password(password, usuario.password):
                 if not es_admin:
                     if usuario.intentos_fallidos >= 3:
@@ -91,17 +91,17 @@ class LoginView(APIView):
                     if usuario.intentos_fallidos == 1:
                         mensaje_error = "Credenciales incorrectas. Intento 1 de 3."
                     elif usuario.intentos_fallidos == 2:
-                        mensaje_error = "Credenciales incorrectas. Intento 2 de 3. Contacte con el administrador si olvidó su contraseña."
+                        mensaje_error = "Credenciales incorrectas. Intento 2 de 3."
                     elif usuario.intentos_fallidos >= 3:
                         usuario.estado = False
-                        mensaje_error = "Credenciales incorrectas. Intentos superados. Cuenta inhabilitada, comuníquese con el administrador."
+                        mensaje_error = "Cuenta inhabilitada por intentos fallidos."
 
                     usuario.save()
 
                     return Response({"error": mensaje_error, "tipo_mensaje": "error"}, status=status.HTTP_400_BAD_REQUEST)
                 else:
                     return Response(
-                        {"error": "Credenciales incorrectas. Como administrador, revise sus datos sin penalizaciones.", "tipo_mensaje": "advertencia"},
+                        {"error": "Credenciales incorrectas (administrador).", "tipo_mensaje": "advertencia"},
                         status=status.HTTP_400_BAD_REQUEST,
                     )
 
@@ -117,64 +117,87 @@ class LoginView(APIView):
                 permisos += [rp.permiso.nombre for rp in ur.rol.rolpermiso_set.all()]
 
             if not roles or not permisos:
-                return Response({"error": "El usuario no tiene roles ni permisos asignados.", "tipo_mensaje": "error"}, status=status.HTTP_403_FORBIDDEN)
+                return Response(
+                    {"error": "El usuario no tiene roles ni permisos asignados.", "tipo_mensaje": "error"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
 
-           
-            # MENSAJES DE INICIO DE SESIÓN
+            # MENSAJES
             mensaje_principal = "¡Inicio de sesión exitoso!"
             mensaje_adicional = ""
             tipo_mensaje = "exito"
-            dias_transcurridos = 0
             requiere_cambio_password = False
             mensaje_urgente = False
-            if not es_admin:
-                # Control de primer login / cambio obligatorio
-                if not usuario.fecha_cambio_password:
-                    if usuario.logins_exitosos == 1:
-                        mensaje_adicional = "Cambie su contraseña, este es su primer inicio de sesión."
-                        requiere_cambio_password = True
-                        mensaje_urgente = True
-                        tipo_mensaje = "advertencia_urgente"
-                    elif usuario.logins_exitosos == 2:
-                        mensaje_adicional = "Debe cambiar su contraseña obligatoriamente, este es su segundo inicio de sesión. Después de este inicio de sesión será bloqueada la cuenta si no cambia la contraseña"
-                        requiere_cambio_password = True
-                        mensaje_urgente = True
-                        tipo_mensaje = "advertencia_urgente"
-                    elif usuario.logins_exitosos >= 3:
-                        usuario.estado = False
-                        usuario.save()
-                        return Response({"error": "Cuenta bloqueada por no cambiar contraseña. Comuníquese con el administrador", "tipo_mensaje": "error"}, status=status.HTTP_403_FORBIDDEN)
 
-                # Control de caducidad
-                dias_transcurridos = calcular_dias_password(usuario)
-                
-                if dias_transcurridos >= 90:
-                    usuario.estado = False
-                    usuario.save()
-                    return Response({
-                        "error": "Su contraseña ha caducado (90 días). Cuenta desactivada.",
-                        "tipo_mensaje": "error"
-                    }, status=status.HTTP_403_FORBIDDEN)
-
-                elif dias_transcurridos >= 89:
-                    mensaje_adicional = "URGENTE: Debe cambiar su contraseña (día 89)."
+            # =========================
+            # 🔥 CAMBIO 1: TODOS LOS USUARIOS
+            # =========================
+            if not usuario.fecha_cambio_password:
+                if usuario.logins_exitosos == 1:
+                    mensaje_adicional = "Cambie su contraseña, primer inicio de sesión."
                     requiere_cambio_password = True
                     mensaje_urgente = True
                     tipo_mensaje = "advertencia_urgente"
 
-                elif dias_transcurridos >= 88:
-                    mensaje_adicional = "Advertencia: su contraseña caducará pronto (día 88)."
-                    tipo_mensaje = "advertencia"
+                elif usuario.logins_exitosos == 2:
+                    mensaje_adicional = "Debe cambiar su contraseña obligatoriamente."
+                    requiere_cambio_password = True
+                    mensaje_urgente = True
+                    tipo_mensaje = "advertencia_urgente"
 
+                elif usuario.logins_exitosos >= 3:
+                    if not es_admin:
+                        usuario.estado = False
+                        usuario.save()
+                        return Response(
+                            {"error": "Cuenta bloqueada por no cambiar contraseña.", "tipo_mensaje": "error"},
+                            status=status.HTTP_403_FORBIDDEN
+                        )
+                    else:
+                        mensaje_adicional = "Administrador: debe cambiar su contraseña."
+                        requiere_cambio_password = True
+                        mensaje_urgente = True
+
+            # =========================
+            # 🔥 CAMBIO 2: DÍAS PARA TODOS
+            # =========================
+            if usuario.fecha_cambio_password:
+                dias_transcurridos = (timezone.now().date() - usuario.fecha_cambio_password.date()).days
             else:
-                mensaje_adicional = "Bienvenido, administrador. Acceso completo."
+                dias_transcurridos = (timezone.now().date() - usuario.fecha_creacion.date()).days
 
-            # RESPUESTA PARA SELECCIÓN DE 2FA
+            # =========================
+            # 🔥 CAMBIO 3: CADUCIDAD
+            # =========================
+            if dias_transcurridos >= 90:
+                if not es_admin:
+                    usuario.estado = False
+                    usuario.save()
+                    return Response(
+                        {"error": "Contraseña caducada.", "tipo_mensaje": "error"},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+                else:
+                    mensaje_adicional = "Administrador: contraseña caducada."
+                    requiere_cambio_password = True
+                    mensaje_urgente = True
+                    tipo_mensaje = "advertencia_urgente"
+
+            elif dias_transcurridos == 89:
+                mensaje_adicional = "Debe cambiar su contraseña (día 89)."
+                requiere_cambio_password = True
+                tipo_mensaje = "advertencia"
+
+            elif dias_transcurridos == 88:
+                mensaje_adicional = "Advertencia: contraseña por caducar (día 88)."
+                tipo_mensaje = "advertencia"
+
+            # RESPUESTA
             return Response({
                 "usuario_id": usuario.id,
                 "requiere_2fa": True,
                 "opciones_2fa": ["correo", "totp"],
-                "mensaje": "Seleccione un método de verificación de dos factores.",
+                "mensaje": mensaje_principal,
                 "roles": roles,
                 "permisos": permisos,
                 "nombre_usuario": usuario.nombre,
@@ -183,34 +206,12 @@ class LoginView(APIView):
                 "mensaje_adicional": mensaje_adicional,
                 "tipo_mensaje": tipo_mensaje,
                 "dias_transcurridos": dias_transcurridos,
-                "dias_transcurridos": dias_transcurridos,
                 "requiere_cambio_password": requiere_cambio_password,
                 "mensaje_urgente": mensaje_urgente,
             }, status=status.HTTP_200_OK)
 
         except Usuario.DoesNotExist:
-            try:
-                Atacante.objects.create(
-                    ip=request.META.get("REMOTE_ADDR"),
-                    tipos="Usuario no encontrado",
-                    payload=json.dumps(request.data),
-                    user_agent=request.META.get("HTTP_USER_AGENT", ""),
-                    bloqueado=True,
-                    fecha=timezone.now(),
-                )
-            except Exception as e:
-                print("Error guardando ataque:", e)
-
             return Response({"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
-
-
-def calcular_dias_password(usuario):
-    if usuario.fecha_cambio_password:
-        fecha_base = usuario.fecha_cambio_password
-    else:
-        fecha_base = usuario.fecha_creacion
-
-    return (timezone.now().date() - fecha_base.date()).days
 
 class Verificar2FAView(APIView):
     authentication_classes = []
@@ -563,8 +564,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             data["password"] = make_password(nueva_password)
             data["fecha_cambio_password"] = timezone.now()
             cambio_password = True  # ← NUEVO: Flag para reset
-        if reactivacion:
-            instance.fecha_cambio_password = None
+
         #  Detectar reactivación de usuario (estado False → True) y reset de intentos fallidos
         nuevo_estado = data.get("estado", instance.estado)  # Usa actual si no se envía
         reactivacion = (
