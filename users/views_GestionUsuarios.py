@@ -129,9 +129,7 @@ class LoginView(APIView):
             requiere_cambio_password = False
             mensaje_urgente = False
 
-            # =========================
-            # 🔥 CAMBIO 1: TODOS LOS USUARIOS
-            # =========================
+
             if not usuario.fecha_cambio_password:
                 if usuario.logins_exitosos == 1:
                     mensaje_adicional = "Cambie su contraseña, primer inicio de sesión."
@@ -158,17 +156,12 @@ class LoginView(APIView):
                         requiere_cambio_password = True
                         mensaje_urgente = True
 
-            # =========================
-            # 🔥 CAMBIO 2: DÍAS PARA TODOS
-            # =========================
+
             if usuario.fecha_cambio_password:
                 dias_transcurridos = (timezone.now().date() - usuario.fecha_cambio_password.date()).days
             else:
                 dias_transcurridos = (timezone.now().date() - usuario.fecha_creacion.date()).days
 
-            # =========================
-            # 🔥 CAMBIO 3: CADUCIDAD
-            # =========================
             if dias_transcurridos >= 90:
                 if not es_admin:
                     usuario.estado = False

@@ -323,8 +323,10 @@ CSRF_DEFENSE_BLOCK_REQUIRE_ORIGIN_MISMATCH = True
 CSRF_DEFENSE_BLOCK_SCORE = 0.35
 
 # Frontend
-FRONTEND_URL = "http://localhost:4200"
-
+FRONTEND_URL = config(
+    "FRONTEND_URL",
+    default="http://localhost:4200"
+)
 # Cache prefix
 CACHE_MIDDLEWARE_KEY_PREFIX = "mallafinita"
 
