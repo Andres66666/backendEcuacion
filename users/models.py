@@ -11,8 +11,8 @@ import pyotp
 from datetime import timedelta
 import uuid
 
-
 # === =============  seccion 1   === ==================
+
 
 class Rol(models.Model):
     nombre = models.CharField(max_length=100)
@@ -124,9 +124,7 @@ class Codigo2FA(models.Model):
 class TempPasswordReset(models.Model):
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
     token = models.UUIDField(default=uuid.uuid4, unique=True)
-    temp_password = models.CharField(
-        max_length=128
-    ) 
+    temp_password = models.CharField(max_length=128)
     creado_en = models.DateTimeField(auto_now_add=True)
     usado = models.BooleanField(default=False)
     expirado = models.BooleanField(default=False)
@@ -139,9 +137,10 @@ class TempPasswordReset(models.Model):
     def __str__(self):
         return f"Token {self.token} para {self.usuario.correo}"
 
+
 class RegistroPendiente(models.Model):
     token = models.UUIDField(default=uuid.uuid4, unique=True)
-    datos = models.JSONField() 
+    datos = models.JSONField()
     correo = models.EmailField()
     creado_en = models.DateTimeField(auto_now_add=True)
     verificado = models.BooleanField(default=False)
@@ -149,10 +148,11 @@ class RegistroPendiente(models.Model):
     def __str__(self):
         return f"Registro pendiente: {self.correo}"
 
+
 # === AUDITORIA ATACNATES ===
 class Atacante(models.Model):
     ip = models.GenericIPAddressField()
-    fingerprint = models.CharField(max_length=64, db_index=True) 
+    fingerprint = models.CharField(max_length=64, db_index=True)
     user_agent = models.TextField(blank=True, null=True)
     payload = models.TextField(blank=True, null=True)
     tipos = models.TextField()
@@ -164,7 +164,9 @@ class Atacante(models.Model):
     def __str__(self):
         return f"{self.ip} - {self.fecha}"
 
+
 # ================  seccion 2   =======================
+
 
 class Proyecto(models.Model):
     id_proyecto = models.AutoField(primary_key=True)
@@ -179,42 +181,58 @@ class Proyecto(models.Model):
     ganancia = models.DecimalField(max_digits=5, decimal_places=2)
     margen_utilidad = models.DecimalField(max_digits=5, decimal_places=2)
 
-    creado_por = models.ForeignKey("Usuario",on_delete=models.CASCADE,related_name="proyectos_creados")
+    creado_por = models.ForeignKey(
+        "Usuario", on_delete=models.CASCADE, related_name="proyectos_creados"
+    )
 
     class Meta:
-        constraints = [models.UniqueConstraint(fields=["creado_por", "NombreProyecto"],name="uq_proyecto_por_usuario")]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["creado_por", "NombreProyecto"], name="uq_proyecto_por_usuario"
+            )
+        ]
 
     def __str__(self):
         return f"{self.NombreProyecto} (#{self.id_proyecto})"
 
+
 class Modulo(models.Model):
-    proyecto = models.ForeignKey(Proyecto,on_delete=models.CASCADE,related_name="modulos")
+    proyecto = models.ForeignKey(
+        Proyecto, on_delete=models.CASCADE, related_name="modulos"
+    )
     codigo = models.CharField(max_length=50)
     nombre = models.CharField(max_length=255)
 
     class Meta:
-        constraints = [models.UniqueConstraint(fields=["proyecto", "codigo"],name="uq_modulo_codigo_por_proyecto")]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["proyecto", "codigo"], name="uq_modulo_codigo_por_proyecto"
+            )
+        ]
 
     def __str__(self):
         return f"{self.codigo} - {self.nombre} ({self.proyecto.NombreProyecto})"
 
 
 class GastoOperacion(models.Model):
-    modulo = models.ForeignKey(Modulo,on_delete=models.CASCADE,   related_name="gastos")
+    modulo = models.ForeignKey(Modulo, on_delete=models.CASCADE, related_name="gastos")
     descripcion = models.CharField(max_length=255)
     unidad = models.CharField(max_length=50)
     cantidad = models.DecimalField(max_digits=10, decimal_places=2)
     precio_unitario = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     costo_parcial = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
-
     def __str__(self):
         return f"{self.descripcion} ({self.cantidad} {self.unidad} @ {self.precio_unitario})"
 
+
 # === =============  seccion 3   === ==================
 
+
 class Materiales(models.Model):
-    gasto_operacion = models.ForeignKey(GastoOperacion,on_delete=models.CASCADE,related_name="materiales")
+    gasto_operacion = models.ForeignKey(
+        GastoOperacion, on_delete=models.CASCADE, related_name="materiales"
+    )
     descripcion = models.CharField(max_length=255)
     unidad = models.CharField(max_length=50)
     cantidad = models.DecimalField(max_digits=10, decimal_places=5)
@@ -226,7 +244,9 @@ class Materiales(models.Model):
 
 
 class ManoDeObra(models.Model):
-    gasto_operacion = models.ForeignKey(GastoOperacion,on_delete=models.CASCADE,related_name="mano_obra")
+    gasto_operacion = models.ForeignKey(
+        GastoOperacion, on_delete=models.CASCADE, related_name="mano_obra"
+    )
     descripcion = models.CharField(max_length=255)
     unidad = models.CharField(max_length=50)
     cantidad = models.DecimalField(max_digits=10, decimal_places=5)
@@ -238,7 +258,9 @@ class ManoDeObra(models.Model):
 
 
 class EquipoHerramienta(models.Model):
-    gasto_operacion = models.ForeignKey(GastoOperacion,on_delete=models.CASCADE,related_name="equipos")
+    gasto_operacion = models.ForeignKey(
+        GastoOperacion, on_delete=models.CASCADE, related_name="equipos"
+    )
     descripcion = models.CharField(max_length=255)
     unidad = models.CharField(max_length=50)
     cantidad = models.DecimalField(max_digits=10, decimal_places=5)
@@ -250,10 +272,11 @@ class EquipoHerramienta(models.Model):
 
 
 class GastosGenerales(models.Model):
-    gasto_operacion = models.ForeignKey(GastoOperacion,on_delete=models.CASCADE,related_name="gastos_generales")
+    gasto_operacion = models.ForeignKey(
+        GastoOperacion, on_delete=models.CASCADE, related_name="gastos_generales"
+    )
     totalgastosgenerales = models.DecimalField(max_digits=12, decimal_places=2)
     total = models.DecimalField(max_digits=12, decimal_places=2)
 
     def __str__(self):
         return f"{self.total}"
-

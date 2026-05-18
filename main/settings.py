@@ -67,15 +67,13 @@ MIDDLEWARE = [
     # Mensajes y UI
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-
     # --- Middlewares GuardianUnivalle ---
-    #"GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseCryptoMiddleware",
-    #"GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseCryptoMiddleware",
-    #"GuardianUnivalle_Benito_Yucra.detectores.detector_csrf.CSRFDefenseMiddleware",    
-    #"GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware",
-    
+    # "GuardianUnivalle_Benito_Yucra.detectores.detector_sql.SQLIDefenseCryptoMiddleware",
+    # "GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseCryptoMiddleware",
+    # "GuardianUnivalle_Benito_Yucra.detectores.detector_csrf.CSRFDefenseMiddleware",
+    # "GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware",
     # Auditoría app
-    #"users.middleware.AuditoriaMiddleware",
+    # "users.middleware.AuditoriaMiddleware",
 ]
 
 # =====================================================
@@ -115,7 +113,7 @@ DATABASES = {
         "HOST": "dpg-d6bnv795pdvs73erthr0-a.oregon-postgres.render.com",
         "PORT": "5432",
     }
-} 
+}
 
 """ DATABASES = {
     "default": {
@@ -135,7 +133,9 @@ LOGIN_URL = "two_factor:login"
 LOGIN_REDIRECT_URL = "two_factor:profile"
 
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
+    },
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
@@ -248,26 +248,26 @@ DOS_LIMITE_PETICIONES = 120
 DOS_VENTANA_SEGUNDOS = 60
 DOS_TIEMPO_BLOQUEO = 300
 
-DOS_PESO = 0.6              
-DOS_LIMITE_ENDPOINTS = 80       
+DOS_PESO = 0.6
+DOS_LIMITE_ENDPOINTS = 80
 
 
-DOS_PESO_BLACKLIST = 0.15      
-DOS_PESO_HEURISTICA = 0.25     
-DOS_UMBRAL_BLOQUEO = 0.8       
+DOS_PESO_BLACKLIST = 0.15
+DOS_PESO_HEURISTICA = 0.25
+DOS_UMBRAL_BLOQUEO = 0.8
 
 DOS_WARN_RATIO = 0.75
 DOS_WARN_MIN_SCORE = 0.20
 DOS_WARN_MIN_REQ = 10
 DOS_TRUSTED_IPS = ["127.0.0.1", "192.168.1.15"]
 
-DOS_WARN_RATE_RATIO = 0.75      
-DOS_WARN_MIN_SCORE = 0.12      
+DOS_WARN_RATE_RATIO = 0.75
+DOS_WARN_MIN_SCORE = 0.12
 
 DOS_BLACKLIST_CACHE_KEY = "dos:blacklist:set"
-DOS_BLACKLIST_REFRESH_SECONDS = 60 * 60 * 6  
+DOS_BLACKLIST_REFRESH_SECONDS = 60 * 60 * 6
 
-DOS_DEFENSE_HASH = "SHA256"     
+DOS_DEFENSE_HASH = "SHA256"
 
 # -----------------------
 # SQL Injection Defense
@@ -323,10 +323,7 @@ CSRF_DEFENSE_BLOCK_REQUIRE_ORIGIN_MISMATCH = True
 CSRF_DEFENSE_BLOCK_SCORE = 0.35
 
 # Frontend
-FRONTEND_URL = config(
-    "FRONTEND_URL",
-    default="http://localhost:4200"
-)
+FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:4200")
 # Cache prefix
 CACHE_MIDDLEWARE_KEY_PREFIX = "mallafinita"
 
