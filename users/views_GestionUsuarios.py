@@ -14,8 +14,8 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework_simplejwt.tokens import RefreshToken
 import cloudinary
+import cloudinary.uploader
 
-import cloudinary
 # =================== MODELOS ===================
 from .models import (
     Atacante,
@@ -28,6 +28,7 @@ from .models import (
     Usuario,
     UsuarioRol,
 )
+
 # =================== SERIALIZERS ===================
 from .serializers import (
     LoginSerializer,
@@ -44,6 +45,7 @@ from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.conf import settings
 from django.shortcuts import get_object_or_404
+
 # =====================================================
 # === =============  seccion 1   === ==================
 # =====================================================
@@ -63,15 +65,25 @@ class LoginView(APIView):
 
         try:
             usuario = Usuario.objects.prefetch_related(
-                Prefetch("usuariorol_set", queryset=UsuarioRol.objects.select_related("rol")),
-                Prefetch("usuariorol_set__rol__rolpermiso_set", queryset=RolPermiso.objects.select_related("permiso")),
+                Prefetch(
+                    "usuariorol_set", queryset=UsuarioRol.objects.select_related("rol")
+                ),
+                Prefetch(
+                    "usuariorol_set__rol__rolpermiso_set",
+                    queryset=RolPermiso.objects.select_related("permiso"),
+                ),
             ).get(correo=correo)
 
-            es_admin = "Administrador" in [ur.rol.nombre for ur in usuario.usuariorol_set.all()]
+            es_admin = "Administrador" in [
+                ur.rol.nombre for ur in usuario.usuariorol_set.all()
+            ]
 
             if not usuario.estado:
                 return Response(
-                    {"error": "Usuario desactivado. Contacte al administrador.", "tipo_mensaje": "error"},
+                    {
+                        "error": "Usuario desactivado. Contacte al administrador.",
+                        "tipo_mensaje": "error",
+                    },
                     status=status.HTTP_403_FORBIDDEN,
                 )
 
@@ -79,9 +91,16 @@ class LoginView(APIView):
             if not check_password(password, usuario.password):
                 if not es_admin:
                     if usuario.intentos_fallidos >= 3:
-                        if usuario.ultimo_intento and timezone.now() - usuario.ultimo_intento < timedelta(minutes=10):
+                        if (
+                            usuario.ultimo_intento
+                            and timezone.now() - usuario.ultimo_intento
+                            < timedelta(minutes=10)
+                        ):
                             return Response(
-                                {"error": "Demasiados intentos fallidos. Intente nuevamente en 10 minutos.", "tipo_mensaje": "error"},
+                                {
+                                    "error": "Demasiados intentos fallidos. Intente nuevamente en 10 minutos.",
+                                    "tipo_mensaje": "error",
+                                },
                                 status=status.HTTP_403_FORBIDDEN,
                             )
 
@@ -98,10 +117,16 @@ class LoginView(APIView):
 
                     usuario.save()
 
-                    return Response({"error": mensaje_error, "tipo_mensaje": "error"}, status=status.HTTP_400_BAD_REQUEST)
+                    return Response(
+                        {"error": mensaje_error, "tipo_mensaje": "error"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
                 else:
                     return Response(
-                        {"error": "Credenciales incorrectas (administrador).", "tipo_mensaje": "advertencia"},
+                        {
+                            "error": "Credenciales incorrectas (administrador).",
+                            "tipo_mensaje": "advertencia",
+                        },
                         status=status.HTTP_400_BAD_REQUEST,
                     )
 
@@ -118,8 +143,11 @@ class LoginView(APIView):
 
             if not roles or not permisos:
                 return Response(
-                    {"error": "El usuario no tiene roles ni permisos asignados.", "tipo_mensaje": "error"},
-                    status=status.HTTP_403_FORBIDDEN
+                    {
+                        "error": "El usuario no tiene roles ni permisos asignados.",
+                        "tipo_mensaje": "error",
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
                 )
 
             # MENSAJES
@@ -128,7 +156,6 @@ class LoginView(APIView):
             tipo_mensaje = "exito"
             requiere_cambio_password = False
             mensaje_urgente = False
-
 
             if not usuario.fecha_cambio_password:
                 if usuario.logins_exitosos == 1:
@@ -148,19 +175,25 @@ class LoginView(APIView):
                         usuario.estado = False
                         usuario.save()
                         return Response(
-                            {"error": "Cuenta bloqueada por no cambiar contraseña.", "tipo_mensaje": "error"},
-                            status=status.HTTP_403_FORBIDDEN
+                            {
+                                "error": "Cuenta bloqueada por no cambiar contraseña.",
+                                "tipo_mensaje": "error",
+                            },
+                            status=status.HTTP_403_FORBIDDEN,
                         )
                     else:
                         mensaje_adicional = "Administrador: debe cambiar su contraseña."
                         requiere_cambio_password = True
                         mensaje_urgente = True
 
-
             if usuario.fecha_cambio_password:
-                dias_transcurridos = (timezone.now().date() - usuario.fecha_cambio_password.date()).days
+                dias_transcurridos = (
+                    timezone.now().date() - usuario.fecha_cambio_password.date()
+                ).days
             else:
-                dias_transcurridos = (timezone.now().date() - usuario.fecha_creacion.date()).days
+                dias_transcurridos = (
+                    timezone.now().date() - usuario.fecha_creacion.date()
+                ).days
 
             if dias_transcurridos >= 90:
                 if not es_admin:
@@ -168,7 +201,7 @@ class LoginView(APIView):
                     usuario.save()
                     return Response(
                         {"error": "Contraseña caducada.", "tipo_mensaje": "error"},
-                        status=status.HTTP_403_FORBIDDEN
+                        status=status.HTTP_403_FORBIDDEN,
                     )
                 else:
                     mensaje_adicional = "Administrador: contraseña caducada."
@@ -186,25 +219,31 @@ class LoginView(APIView):
                 tipo_mensaje = "advertencia"
 
             # RESPUESTA
-            return Response({
-                "usuario_id": usuario.id,
-                "requiere_2fa": True,
-                "opciones_2fa": ["correo", "totp"],
-                "mensaje": mensaje_principal,
-                "roles": roles,
-                "permisos": permisos,
-                "nombre_usuario": usuario.nombre,
-                "apellido": usuario.apellido,
-                "imagen_url": usuario.imagen_url,
-                "mensaje_adicional": mensaje_adicional,
-                "tipo_mensaje": tipo_mensaje,
-                "dias_transcurridos": dias_transcurridos,
-                "requiere_cambio_password": requiere_cambio_password,
-                "mensaje_urgente": mensaje_urgente,
-            }, status=status.HTTP_200_OK)
+            return Response(
+                {
+                    "usuario_id": usuario.id,
+                    "requiere_2fa": True,
+                    "opciones_2fa": ["correo", "totp"],
+                    "mensaje": mensaje_principal,
+                    "roles": roles,
+                    "permisos": permisos,
+                    "nombre_usuario": usuario.nombre,
+                    "apellido": usuario.apellido,
+                    "imagen_url": usuario.imagen_url,
+                    "mensaje_adicional": mensaje_adicional,
+                    "tipo_mensaje": tipo_mensaje,
+                    "dias_transcurridos": dias_transcurridos,
+                    "requiere_cambio_password": requiere_cambio_password,
+                    "mensaje_urgente": mensaje_urgente,
+                },
+                status=status.HTTP_200_OK,
+            )
 
         except Usuario.DoesNotExist:
-            return Response({"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND
+            )
+
 
 class Verificar2FAView(APIView):
     authentication_classes = []
@@ -221,9 +260,7 @@ class Verificar2FAView(APIView):
             return Response({"error": "Usuario no encontrado"}, status=404)
 
         if not metodo or metodo not in ["correo", "totp"]:
-            return Response(
-                {"error": "Método 2FA inválido"}, status=400
-            )
+            return Response({"error": "Método 2FA inválido"}, status=400)
         if metodo == "correo":
             codigo_obj = (
                 Codigo2FA.objects.filter(usuario=usuario, codigo=codigo, expirado=False)
@@ -252,6 +289,7 @@ class Verificar2FAView(APIView):
             status=200,
         )
 
+
 class GenerarQRView(APIView):
     authentication_classes = []
     permission_classes = []
@@ -278,6 +316,7 @@ class GenerarQRView(APIView):
             print("ERROR EN GENERAR QR:")
             print(traceback.format_exc())
             return Response({"error": str(e)}, status=500)
+
 
 class EnviarCodigoCorreoView(APIView):
     authentication_classes = []
@@ -310,6 +349,7 @@ class EnviarCodigoCorreoView(APIView):
 
         return Response({"mensaje": "Código enviado"}, status=200)
 
+
 class ResetPasswordView(APIView):
     authentication_classes = []
     permission_classes = []
@@ -320,7 +360,7 @@ class ResetPasswordView(APIView):
             usuario = Usuario.objects.get(correo=correo)
         except Usuario.DoesNotExist:
             return Response({"error": "Usuario no encontrado"}, status=404)
-        temp_pass = get_random_string(10)  
+        temp_pass = get_random_string(10)
 
         token = uuid.uuid4()
         TempPasswordReset.objects.create(
@@ -340,15 +380,16 @@ class ResetPasswordView(APIView):
             )
         except Exception as e:
             print(f"[ResetPassword] Error email: {e}")
-            
+
         return Response(
             {
                 "mensaje": "Se envió un correo con la contraseña temporal. Ingresa el código recibido para continuar.",
                 "usuario_id": usuario.id,
-                "temp_token": str(token), 
+                "temp_token": str(token),
             },
             status=200,
         )
+
 
 class VerificarTempPasswordView(APIView):
     authentication_classes = []
@@ -368,9 +409,7 @@ class VerificarTempPasswordView(APIView):
             token_obj.expirado = True
             token_obj.save()
             return Response({"error": "Token expirado o ya usado"}, status=400)
-        if (
-            token_obj.temp_password != temp_pass
-        ):  
+        if token_obj.temp_password != temp_pass:
             return Response({"error": "Contraseña temporal incorrecta"}, status=400)
         return Response(
             {
@@ -379,6 +418,7 @@ class VerificarTempPasswordView(APIView):
             },
             status=200,
         )
+
 
 class CambiarPasswordTempView(APIView):
     authentication_classes = []
@@ -424,6 +464,7 @@ class CambiarPasswordTempView(APIView):
             status=200,
         )
 
+
 class RolViewSet(viewsets.ModelViewSet):
     queryset = Rol.objects.all()
     serializer_class = RolSerializer
@@ -458,6 +499,7 @@ class RolViewSet(viewsets.ModelViewSet):
             {"mensaje": f"Rol '{nombre}' actualizado correctamente."},
             status=status.HTTP_200_OK,
         )
+
 
 class PermisoViewSet(viewsets.ModelViewSet):
     queryset = Permiso.objects.all()
@@ -498,18 +540,28 @@ class PermisoViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK,
         )
 
+
 class UsuarioViewSet(viewsets.ModelViewSet):
     queryset = Usuario.objects.all()
     serializer_class = UsuarioSerializer
 
+    # =====================================================
+    # CREAR USUARIO
+    # =====================================================
     def create(self, request, *args, **kwargs):
         data = request.data.copy()
 
         # Subir imagen si existe
         if "imagen_url" in request.FILES:
             try:
-                uploaded_image = cloudinary.uploader.upload(request.FILES["imagen_url"])
-                data["imagen_url"] = uploaded_image.get("url")
+                uploaded_image = cloudinary.uploader.upload(
+                    request.FILES["imagen_url"], folder="usuarios"
+                )
+
+                # Guardar URL y public_id
+                data["imagen_url"] = uploaded_image.get("secure_url")
+                data["imagen_public_id"] = uploaded_image.get("public_id")
+
             except Exception as e:
                 return Response(
                     {"error": f"Error al subir imagen: {str(e)}"},
@@ -518,82 +570,167 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 
         # Crear usuario
         serializer = self.get_serializer(data=data)
+
         serializer.is_valid(raise_exception=True)
+
         usuario = serializer.save()
 
         # Asignar rol si viene en el request
         rol_id = request.data.get("rol")
+
         if rol_id:
             UsuarioRol.objects.create(usuario=usuario, rol_id=rol_id)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+    # =====================================================
+    # ACTUALIZAR USUARIO
+    # =====================================================
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
+
         data = request.data.copy()
 
         print("Archivos recibidos:", request.FILES)
 
-        # Subir nueva imagen si se incluye
+        # =================================================
+        # SUBIR NUEVA IMAGEN
+        # =================================================
         if "imagen_url" in request.FILES:
             try:
-                uploaded_image = cloudinary.uploader.upload(request.FILES["imagen_url"])
-                data["imagen_url"] = uploaded_image.get("url")
+
+                # Eliminar imagen anterior de Cloudinary
+                if instance.imagen_public_id:
+                    cloudinary.uploader.destroy(instance.imagen_public_id)
+
+                # Subir nueva imagen
+                uploaded_image = cloudinary.uploader.upload(
+                    request.FILES["imagen_url"], folder="usuarios"
+                )
+
+                # Guardar nueva URL y public_id
+                data["imagen_url"] = uploaded_image.get("secure_url")
+
+                data["imagen_public_id"] = uploaded_image.get("public_id")
+
             except Exception as e:
                 print("Error al subir imagen:", e)
+
                 return Response(
-                    {"error": "Error al subir imagen a Cloudinary"},
+                    {"error": "Error al actualizar imagen"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+
         else:
-            # Mantener imagen actual si no se sube nueva
+            # Mantener imagen actual
             data["imagen_url"] = instance.imagen_url
+            data["imagen_public_id"] = instance.imagen_public_id
 
-        # Detectar cambio de contraseña y reset de intentos fallidos
+        # =================================================
+        # CAMBIO DE CONTRASEÑA
+        # =================================================
         nueva_password = data.get("password")
+
         cambio_password = False
+
         if nueva_password and not check_password(nueva_password, instance.password):
-            # Solo si es distinta de la actual
             data["password"] = make_password(nueva_password)
+
             data["fecha_cambio_password"] = timezone.now()
-            cambio_password = True  # ← NUEVO: Flag para reset
 
-        #  Detectar reactivación de usuario (estado False → True) y reset de intentos fallidos
-        nuevo_estado = data.get("estado", instance.estado)  # Usa actual si no se envía
-        reactivacion = (
-            not instance.estado
-        ) and nuevo_estado  # ← Solo si era False y ahora True
+            cambio_password = True
 
-        # Eliminar archivo accidental
+        # =================================================
+        # REACTIVACIÓN DE USUARIO
+        # =================================================
+        nuevo_estado = data.get("estado", instance.estado)
+
+        reactivacion = (not instance.estado) and nuevo_estado
+
+        # =================================================
+        # LIMPIAR FILES
+        # =================================================
         if "imagen_url" in request.FILES:
             del request._files["imagen_url"]
 
+        # =================================================
+        # SERIALIZER
+        # =================================================
         serializer = self.get_serializer(instance, data=data, partial=True)
 
         if not serializer.is_valid():
             print("Errores del serializer:", serializer.errors)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        # ← NUEVO: Aplicar resets antes de guardar
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # =================================================
+        # RESET DE INTENTOS
+        # =================================================
         if cambio_password or reactivacion:
-            instance.intentos_fallidos = 0  # Reset en ambos casos
-            if cambio_password:
-                print(
-                    f"Contraseña cambiada para usuario {instance.id}: intentos fallidos reseteados a 0"
-                )
-            if reactivacion:
-                print(
-                    f"Usuario {instance.id} reactivado: intentos fallidos reseteados a 0"
-                )
+            instance.intentos_fallidos = 0
 
+        # =================================================
+        # ACTUALIZAR ROL
+        # =================================================
+        rol_id = request.data.get("rol")
+
+        if rol_id:
+
+            usuario_rol = UsuarioRol.objects.filter(usuario=instance).first()
+
+            if usuario_rol:
+                usuario_rol.rol_id = rol_id
+                usuario_rol.save()
+
+            else:
+                UsuarioRol.objects.create(usuario=instance, rol_id=rol_id)
+
+        # =================================================
+        # GUARDAR USUARIO
+        # =================================================
         serializer.save()
+
         return Response(serializer.data)
+
+    # =====================================================
+    # ELIMINAR USUARIO
+    # =====================================================
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        try:
+
+            # Eliminar imagen de Cloudinary
+            if instance.imagen_public_id:
+                cloudinary.uploader.destroy(instance.imagen_public_id)
+
+            # Eliminar relaciones de roles
+            UsuarioRol.objects.filter(usuario=instance).delete()
+
+            # Eliminar usuario
+            instance.delete()
+
+            return Response(
+                {"mensaje": "Usuario eliminado correctamente"},
+                status=status.HTTP_204_NO_CONTENT,
+            )
+
+        except Exception as e:
+            print("Error al eliminar usuario:", e)
+
+            return Response(
+                {"error": "Error al eliminar usuario"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
 
 class UsuarioRolViewSet(viewsets.ModelViewSet):
     queryset = UsuarioRol.objects.all()
     serializer_class = UsuarioRolSerializer
 
-    
     def create(self, request, *args, **kwargs):
         usuario = request.data.get("usuario")
         rol = request.data.get("rol")
@@ -640,6 +777,7 @@ class UsuarioRolViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
+
 
 class RolPermisoViewSet(viewsets.ModelViewSet):
     queryset = RolPermiso.objects.all()
@@ -694,17 +832,21 @@ class RolPermisoViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
+
     # Agregar este método
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=["get"])
     def permisos_por_rol(self, request):
-        rol_id = request.query_params.get('rol_id')
+        rol_id = request.query_params.get("rol_id")
         if not rol_id:
             return Response({"error": "rol_id es requerido"}, status=400)
-        
-        permisos_asignados = RolPermiso.objects.filter(rol_id=rol_id).values_list('permiso_id', flat=True)
+
+        permisos_asignados = RolPermiso.objects.filter(rol_id=rol_id).values_list(
+            "permiso_id", flat=True
+        )
         return Response(list(permisos_asignados))
 
-class RegistroClienteView(APIView): 
+
+class RegistroClienteView(APIView):
     authentication_classes = []
     permission_classes = []
 
@@ -725,33 +867,34 @@ class RegistroClienteView(APIView):
             if campo not in data or not str(data[campo]).strip():
                 return Response(
                     {"error": f"El campo '{campo}' es obligatorio"},
-                    status=status.HTTP_400_BAD_REQUEST
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
 
         correo = data["correo"].strip()
         ci = data["ci"].strip()
 
-        registro_pendiente = RegistroPendiente.objects.filter(
-            correo=correo,
-            verificado=True
-        ).order_by("-creado_en").first()
+        registro_pendiente = (
+            RegistroPendiente.objects.filter(correo=correo, verificado=True)
+            .order_by("-creado_en")
+            .first()
+        )
 
         if not registro_pendiente:
             return Response(
                 {"error": "Debes verificar tu correo antes de registrar"},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         if Usuario.objects.filter(correo=correo).exists():
             return Response(
                 {"error": "El correo ya está registrado"},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         if Usuario.objects.filter(ci=ci).exists():
             return Response(
                 {"error": "El CI ya está registrado"},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         try:
@@ -759,24 +902,22 @@ class RegistroClienteView(APIView):
         except ValidationError:
             return Response(
                 {"error": "El correo no tiene un formato válido"},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         password = data["password"].strip()
         if len(password) < 8:
             return Response(
                 {"error": "La contraseña debe tener al menos 8 caracteres"},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         try:
-            fecha_nac = datetime.strptime(
-                data["fecha_nacimiento"], "%Y-%m-%d"
-            ).date()
+            fecha_nac = datetime.strptime(data["fecha_nacimiento"], "%Y-%m-%d").date()
         except ValueError:
             return Response(
                 {"error": "La fecha debe tener formato YYYY-MM-DD"},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         try:
@@ -784,7 +925,7 @@ class RegistroClienteView(APIView):
         except Rol.DoesNotExist:
             return Response(
                 {"error": "No existe el rol Cliente activo"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
         try:
@@ -796,7 +937,7 @@ class RegistroClienteView(APIView):
                 correo=correo,
                 password=password,
                 ci=ci,
-                estado=True
+                estado=True,
             )
 
             UsuarioRol.objects.get_or_create(usuario=usuario, rol=rol_cliente)
@@ -807,14 +948,15 @@ class RegistroClienteView(APIView):
                     "usuario_id": usuario.id,
                     "rol_asignado": rol_cliente.nombre,
                 },
-                status=status.HTTP_201_CREATED
+                status=status.HTTP_201_CREATED,
             )
 
         except Exception as e:
             return Response(
                 {"error": f"No se pudo registrar el cliente: {str(e)}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )   
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
 
 class ValidarCorreoView(APIView):
     authentication_classes = []
@@ -834,6 +976,7 @@ class ValidarCorreoView(APIView):
             return Response({"error": "El correo ya está registrado"}, status=400)
 
         return Response({"mensaje": "Correo válido"}, status=200)
+
 
 class EnviarVerificacionView(APIView):
     authentication_classes = []
@@ -872,6 +1015,7 @@ class EnviarVerificacionView(APIView):
 
         return Response({"mensaje": "Correo enviado"}, status=200)
 
+
 class ConfirmarRegistroView(APIView):
     authentication_classes = []
     permission_classes = []
@@ -884,8 +1028,11 @@ class ConfirmarRegistroView(APIView):
             registro.verificado = True
             registro.save()
 
-        return Response({
-            "mensaje": "Verificación correcta",
-            "datos": registro.datos,
-            "verificado": True
-        }, status=200)
+        return Response(
+            {
+                "mensaje": "Verificación correcta",
+                "datos": registro.datos,
+                "verificado": True,
+            },
+            status=200,
+        )

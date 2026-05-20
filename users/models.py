@@ -41,6 +41,9 @@ class Usuario(models.Model):
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
     imagen_url = models.URLField(max_length=500, null=True, blank=True)
+    imagen_public_id = models.CharField(
+        max_length=255, null=True, blank=True
+    )  # nueva variable
     estado = models.BooleanField(default=True)
 
     intentos_fallidos = models.IntegerField(default=0)

@@ -38,7 +38,6 @@ class Command(BaseCommand):
             "GastosOperaciones",
             # Reportes
             "Reportes",
-            
         ]
 
         permisos_objetos = {}
@@ -121,9 +120,7 @@ class Command(BaseCommand):
             )
             UsuarioRol.objects.get_or_create(usuario=user, rol=u["rol"])
             if created:
-                self.stdout.write(
-                    f"Usuario creado: {user} con rol {u['rol'].nombre}"
-                )
+                self.stdout.write(f"Usuario creado: {user} con rol {u['rol'].nombre}")
 
         self.stdout.write(
             self.style.SUCCESS(
