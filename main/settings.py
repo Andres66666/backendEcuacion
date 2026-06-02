@@ -15,13 +15,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = "django-insecure-(fn$sd-g@*)51f7)nc!a^3xeb(ma^9f6pm02_a+2h6tw^251fq"
 DEBUG = True
 
+# Nota importante esto "192.168.0.26", cambiar en todas  las partes por la IP local del equipo donde se ejecute el backend, para pruebas locales. En producción, usar dominios o IPs públicas según corresponda.
 ALLOWED_HOSTS = [
-    "192.168.1.15",
+    "192.168.0.26",
     "127.0.0.1",
     "localhost",
     "mallafinita.netlify.app",
     "backendecuacion.onrender.com",
-    "pseudocourteous-jasperated-shavonne.ngrok-free.dev",
+    "3d42-189-28-95-164.ngrok-free.app",  # ngrok para pruebas locales y remotos
 ]
 
 APPEND_SLASH = True
@@ -72,7 +73,7 @@ MIDDLEWARE = [
     # "GuardianUnivalle_Benito_Yucra.detectores.detector_xss.XSSDefenseCryptoMiddleware",
     # "GuardianUnivalle_Benito_Yucra.detectores.detector_csrf.CSRFDefenseMiddleware",
     # "GuardianUnivalle_Benito_Yucra.detectores.detector_dos.DOSDefenseMiddleware",
-    # Auditoría app
+    # ---- Auditoría app
     # "users.middleware.AuditoriaMiddleware",
 ]
 
@@ -114,8 +115,8 @@ DATABASES = {
         "PORT": "5432",
     }
 }
-""" 
-DATABASES = {
+
+""" DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": "Ecuacion",
@@ -218,7 +219,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:4200",
     "https://mallafinita.netlify.app",
     "https://backendecuacion.onrender.com",
-    "https://pseudocourteous-jasperated-shavonne.ngrok-free.dev",
+    "https://3d42-189-28-95-164.ngrok-free.app",
 ]
 
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
@@ -259,7 +260,7 @@ DOS_UMBRAL_BLOQUEO = 0.8
 DOS_WARN_RATIO = 0.75
 DOS_WARN_MIN_SCORE = 0.20
 DOS_WARN_MIN_REQ = 10
-DOS_TRUSTED_IPS = ["127.0.0.1", "192.168.1.15"]
+DOS_TRUSTED_IPS = ["127.0.0.1", "192.168.0.26"]
 
 DOS_WARN_RATE_RATIO = 0.75
 DOS_WARN_MIN_SCORE = 0.12
@@ -272,12 +273,12 @@ DOS_DEFENSE_HASH = "SHA256"
 # -----------------------
 # SQL Injection Defense
 # -----------------------
-SQLI_DEFENSE_TRUSTED_IPS = ["127.0.0.1", "192.168.1.15"]
+SQLI_DEFENSE_TRUSTED_IPS = ["127.0.0.1", "192.168.0.26"]
 
 # -----------------------
 # XSS Defense
 # -----------------------
-XSS_DEFENSE_TRUSTED_IPS = ["127.0.0.1", "192.168.1.15"]
+XSS_DEFENSE_TRUSTED_IPS = ["127.0.0.1", "192.168.0.26"]
 XSS_DEFENSE_SANITIZE_INPUT = False
 XSS_DEFENSE_BLOCK = True
 XSS_DEFENSE_EXCLUDED_PATHS = ["/health", "/internal"]
@@ -285,7 +286,7 @@ XSS_DEFENSE_EXCLUDED_PATHS = ["/health", "/internal"]
 # -----------------------
 # CSRF Defense
 # -----------------------
-CSRF_DEFENSE_TRUSTED_IPS = ["127.0.0.1", "192.168.1.15"]
+CSRF_DEFENSE_TRUSTED_IPS = ["127.0.0.1", "192.168.0.26"]
 CSRF_DEFENSE_BLOCK = True
 CSRF_DEFENSE_LOG = True
 
