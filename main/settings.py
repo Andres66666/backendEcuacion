@@ -16,6 +16,7 @@ SECRET_KEY = "django-insecure-(fn$sd-g@*)51f7)nc!a^3xeb(ma^9f6pm02_a+2h6tw^251fq
 DEBUG = True
 
 # Nota importante esto "192.168.0.26", cambiar en todas  las partes por la IP local del equipo donde se ejecute el backend, para pruebas locales. En producción, usar dominios o IPs públicas según corresponda.
+# ngrok http 8000
 ALLOWED_HOSTS = [
     "192.168.0.26",
     "127.0.0.1",
