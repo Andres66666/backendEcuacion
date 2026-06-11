@@ -4,10 +4,6 @@ import uuid
 from django.db import models
 from django.contrib.auth.hashers import make_password
 from decimal import Decimal, InvalidOperation
-import base64
-import qrcode
-from io import BytesIO
-import pyotp
 from datetime import timedelta
 import uuid
 
@@ -59,41 +55,6 @@ class Usuario(models.Model):
 
     def __str__(self):
         return f"{self.nombre} {self.apellido}"
-
-    # Campos para 2FA (agrega si no existen)
-    tipo_2fa = models.CharField(
-        max_length=20,
-        choices=[("correo", "Correo"), ("totp", "Google Authenticator")],
-        default="correo",
-    )
-    secret_2fa = models.CharField(max_length=32, blank=True, null=True)
-
-    # Métodos para TOTP
-    def generar_secret_2fa(self):
-        """Genera un nuevo secreto TOTP para Google Authenticator"""
-        if not self.secret_2fa:
-            self.secret_2fa = pyotp.random_base32()
-            self.save()
-
-    def generar_qr_authenticator(self):
-        """Devuelve la imagen QR en base64 para escanear con Google Authenticator"""
-        if not self.secret_2fa:
-            self.generar_secret_2fa()
-        totp_uri = pyotp.TOTP(self.secret_2fa).provisioning_uri(
-            name=self.correo, issuer_name="EcuacionPotosi"
-        )
-        img = qrcode.make(totp_uri)
-        buffer = BytesIO()
-        img.save(buffer, format="PNG")
-        qr_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
-        return qr_base64
-
-    def verificar_codigo_totp(self, codigo):
-        """Verifica un código del Authenticator"""
-        if not self.secret_2fa:
-            return False
-        totp = pyotp.TOTP(self.secret_2fa)
-        return totp.verify(codigo)
 
 
 class UsuarioRol(models.Model):
@@ -150,23 +111,6 @@ class RegistroPendiente(models.Model):
 
     def __str__(self):
         return f"Registro pendiente: {self.correo}"
-
-
-# === AUDITORIA ATACNATES ===
-class Atacante(models.Model):
-    ip = models.GenericIPAddressField()
-    fingerprint = models.CharField(max_length=64, db_index=True)
-    user_agent = models.TextField(blank=True, null=True)
-    payload = models.TextField(blank=True, null=True)
-    tipos = models.TextField()
-    descripcion = models.TextField()
-    fecha = models.DateTimeField(auto_now_add=True)
-    bloqueado = models.BooleanField(default=False)
-    url = models.TextField(blank=True, null=True)
-
-    def __str__(self):
-        return f"{self.ip} - {self.fecha}"
-
 
 # ================  seccion 2   =======================
 

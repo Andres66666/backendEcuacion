@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import  views_Aporte, views_GestionProyectos, views_GestionUsuarios
+from . import  views_GestionProyectos, views_GestionUsuarios
 
 router = DefaultRouter()
 # =====================================================
@@ -24,17 +24,12 @@ router.register(r"mano_de_obra", views_GestionProyectos.ManoDeObraViewSet)
 router.register(r"equipo_herramienta", views_GestionProyectos.EquipoHerramientaViewSet)
 router.register(r"gastos_generales", views_GestionProyectos.GastosGeneralesViewSet)
 
-# =====================================================
-# === =============  seccion 3   === ==================
-# =====================================================
-router.register(r"auditoria_db", views_Aporte.AtacanteViewSet)
 
 urlpatterns = [
     path("", include(router.urls)),
 
     path("login/", views_GestionUsuarios.LoginView.as_view(), name="login"),
     path("verificar-2fa/", views_GestionUsuarios.Verificar2FAView.as_view(), name="verificar-2fa"),
-    path("generar-qr/", views_GestionUsuarios.GenerarQRView.as_view(), name="generar-qr"),
     path("enviar-codigo/", views_GestionUsuarios.EnviarCodigoCorreoView.as_view(), name="enviar-codigo"),
     path("reset-password/", views_GestionUsuarios.ResetPasswordView.as_view(), name="reset-password"),
     path("verificar-temp/",views_GestionUsuarios.VerificarTempPasswordView.as_view(),name="verificar-temp",),

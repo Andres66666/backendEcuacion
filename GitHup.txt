@@ -24,7 +24,7 @@ git checkout -b Produccion
 ```bash
 git status
 git add .
-git commit -m "icono"
+git commit -m "video"
 git push origin Produccion
 ```
 
@@ -45,37 +45,9 @@ git checkout -b Produccion
 ```bash
 git status
 git add .
-git commit -m "icono"
+git commit -m "ultimo cambios"
 git push origin Produccion
 ```
-
----
-
-# GUARDIAN UNIVALLE
-
-## Primera vez
-
-```bash
-git init
-git remote add origin https://github.com/Andres66666/GuardianUnivalle-Benito-Yucra.git
-git checkout -b Produccion
-```
-
-## Subir cambios
-
-```bash
-git status
-git add .
-git commit -m "Actualizacion logo new new"
-git push origin Produccion
-```
-
-
-## Subir cambios de main a Produccion
-
-git checkout Produccion
-git merge main
-git push origin Produccion
 
 
 

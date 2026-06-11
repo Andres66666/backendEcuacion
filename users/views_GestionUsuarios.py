@@ -18,7 +18,6 @@ import cloudinary.uploader
 
 # =================== MODELOS ===================
 from .models import (
-    Atacante,
     Codigo2FA,
     Permiso,
     RegistroPendiente,
@@ -223,7 +222,7 @@ class LoginView(APIView):
                 {
                     "usuario_id": usuario.id,
                     "requiere_2fa": True,
-                    "opciones_2fa": ["correo", "totp"],
+                    "metodo_2fa": "correo",
                     "mensaje": mensaje_principal,
                     "roles": roles,
                     "permisos": permisos,
@@ -252,71 +251,48 @@ class Verificar2FAView(APIView):
     def post(self, request):
         usuario_id = request.data.get("usuario_id")
         codigo = request.data.get("codigo")
-        metodo = request.data.get("metodo")
 
         try:
             usuario = Usuario.objects.get(id=usuario_id)
         except Usuario.DoesNotExist:
-            return Response({"error": "Usuario no encontrado"}, status=404)
-
-        if not metodo or metodo not in ["correo", "totp"]:
-            return Response({"error": "Método 2FA inválido"}, status=400)
-        if metodo == "correo":
-            codigo_obj = (
-                Codigo2FA.objects.filter(usuario=usuario, codigo=codigo, expirado=False)
-                .order_by("-creado_en")
-                .first()
+            return Response(
+                {"error": "Usuario no encontrado"},
+                status=404
             )
-            if not codigo_obj or not codigo_obj.es_valido():
-                return Response({"error": "Código inválido o caducado"}, status=400)
-            codigo_obj.expirado = True
-            codigo_obj.save()
 
-        elif metodo == "totp":
-            if not usuario.verificar_codigo_totp(codigo):
-                return Response({"error": "Código TOTP incorrecto"}, status=400)
+        codigo_obj = (
+            Codigo2FA.objects.filter(
+                usuario=usuario,
+                codigo=codigo,
+                expirado=False
+            )
+            .order_by("-creado_en")
+            .first()
+        )
+
+        if not codigo_obj or not codigo_obj.es_valido():
+            return Response(
+                {"error": "Código inválido o caducado"},
+                status=400
+            )
+
+        codigo_obj.expirado = True
+        codigo_obj.save()
 
         refresh = RefreshToken.for_user(usuario)
-        access_token = str(refresh.access_token)
 
         return Response(
             {
-                "access_token": access_token,
+                "access_token": str(refresh.access_token),
                 "usuario_id": usuario.id,
-                "roles": [ur.rol.nombre for ur in usuario.usuariorol_set.all()],
-                "mensaje": "Autenticación 2FA exitosa",
+                "roles": [
+                    ur.rol.nombre
+                    for ur in usuario.usuariorol_set.all()
+                ],
+                "mensaje": "Autenticación exitosa"
             },
-            status=200,
+            status=200
         )
-
-
-class GenerarQRView(APIView):
-    authentication_classes = []
-    permission_classes = []
-
-    def post(self, request):
-        usuario_id = request.data.get("usuario_id")
-
-        try:
-            usuario = Usuario.objects.get(id=usuario_id)
-        except Usuario.DoesNotExist:
-            return Response({"error": "Usuario no encontrado"}, status=404)
-
-        try:
-            usuario.generar_secret_2fa()
-            qr_base64 = usuario.generar_qr_authenticator()
-            return Response(
-                {
-                    "qr_base64": qr_base64,
-                    "mensaje": "Escanee este código QR con Google Authenticator.",
-                },
-                status=200,
-            )
-        except Exception as e:
-            print("ERROR EN GENERAR QR:")
-            print(traceback.format_exc())
-            return Response({"error": str(e)}, status=500)
-
 
 class EnviarCodigoCorreoView(APIView):
     authentication_classes = []
@@ -341,7 +317,7 @@ class EnviarCodigoCorreoView(APIView):
             Codigo2FA.objects.create(usuario=usuario, codigo=codigo)
 
         subject = "Código de verificación"
-        message = f"Hola {usuario.nombre}, tu código es: {codigo} (válido 5 minutos)."
+        message = f"Hola {usuario.nombre} {usuario.apellido}, tu código es: {codigo} (válido 5 minutos)."
         try:
             send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [usuario.correo])
         except Exception as e:
@@ -372,7 +348,7 @@ class ResetPasswordView(APIView):
         )
 
         subject = "Restablecimiento de contraseña temporal"
-        message = f"Hola {usuario.nombre}, tu contraseña temporal es: {temp_pass}. Úsala para restablecer tu contraseña en el sistema. Válida por 15 minutos."
+        message = f"Hola {usuario.nombre} {usuario.apellido}, tu contraseña temporal es: \"{temp_pass}\" Úsala para restablecer tu contraseña en el sistema. Válida por 15 minutos."
         try:
             send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [usuario.correo])
             print(

@@ -1,11 +1,7 @@
 
 from rest_framework import serializers
-from .models import (Atacante,GastoOperacion,Modulo,Proyecto,Rol,Permiso,Usuario,RolPermiso,UsuarioRol,Materiales,ManoDeObra,EquipoHerramienta,GastosGenerales,)
+from .models import (GastoOperacion,Modulo,Proyecto,Rol,Permiso,Usuario,RolPermiso,UsuarioRol,Materiales,ManoDeObra,EquipoHerramienta,GastosGenerales,)
 
-class AtacanteSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Atacante
-        fields = "__all__"
 
 
 # === =============  seccion 1   === ==================
