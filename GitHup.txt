@@ -24,10 +24,13 @@ git checkout -b Produccion
 ```bash
 git status
 git add .
-git commit -m "video"
+git commit -m "ultimo cambios 14"
 git push origin Produccion
 ```
 
+git remote remove origin
+git remote add origin https://github.com/Andres66666/FrontendEcuacion.git
+git remote -v
 ---
 
 # BACKEND ECUACION
@@ -45,11 +48,13 @@ git checkout -b Produccion
 ```bash
 git status
 git add .
-git commit -m "ultimo cambios"
+git commit -m "ultimo cambios 14"
 git push origin Produccion
 ```
 
-
+git remote remove origin
+git remote add origin https://github.com/Andres66666/backendEcuacion.git
+git remote -v
 
 ---
 

@@ -97,7 +97,7 @@ WSGI_APPLICATION = "main.wsgi.application"
 # === 5. BASE DE DATOS ================================
 # =====================================================
 
-DATABASES = {
+""" DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": "ecuacion_1y5h",
@@ -106,8 +106,8 @@ DATABASES = {
         "HOST": "dpg-d6bnv795pdvs73erthr0-a.oregon-postgres.render.com",
         "PORT": "5432",
     }
-}
-""" 
+} """
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -117,7 +117,7 @@ DATABASES = {
         "HOST": "localhost",
         "PORT": "5432",
     }
-} """
+}
 # =====================================================
 # === 6. CONFIGURACIÓN DE AUTH Y PASSWORDS ============
 # =====================================================
