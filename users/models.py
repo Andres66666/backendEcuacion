@@ -45,6 +45,12 @@ class Usuario(models.Model):
     fecha_cambio_password = models.DateTimeField(null=True, blank=True)
     logins_exitosos = models.IntegerField(default=0)
 
+
+    tipo_2fa = models.CharField(max_length=20, default="correo")
+    secret_2fa = models.TextField(null=True, blank=True)
+
+    
+
     def save(self, *args, **kwargs):
         # Solo volver a encriptar si la contraseña ha cambiado
         if "pbkdf2" not in self.password:
