@@ -13,6 +13,7 @@ from django.db.models import Sum
 from decimal import Decimal, ROUND_HALF_UP
 from django.db.models.functions import Trim, Upper
 from django.db.models import F
+from django.db.models import Max
 
 
 
@@ -496,13 +497,15 @@ class GastoOperacionViewSet(viewsets.ModelViewSet):
 
         if modulo_id and modulo_id != "undefined":
             try:
-                return qs.filter(modulo_id=int(modulo_id)).order_by("id")
+                return qs.filter(modulo_id=int(modulo_id)).order_by("orden")
             except ValueError:
                 return qs.none()
 
         if proyecto_id and proyecto_id != "undefined":
             try:
-                return qs.filter(modulo__proyecto__id_proyecto=int(proyecto_id)).order_by("modulo_id", "id")
+                return qs.filter(
+                    modulo__proyecto__id_proyecto=int(proyecto_id)
+                ).order_by("modulo_id", "orden")
             except ValueError:
                 return qs.none()
 
@@ -516,9 +519,21 @@ class GastoOperacionViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(data=payload)
             serializer.is_valid(raise_exception=True)
 
-            item: GastoOperacion = serializer.save()
+            modulo = serializer.validated_data["modulo"]
 
-            item.costo_parcial = redondear2(to_decimal(item.cantidad) * to_decimal(item.precio_unitario))
+            ultimo = (
+                GastoOperacion.objects
+                .filter(modulo=modulo)
+                .aggregate(Max("orden"))["orden__max"] or 0
+            )
+
+            item: GastoOperacion = serializer.save(
+                orden=ultimo + 1
+            )
+
+            item.costo_parcial = redondear2(
+                to_decimal(item.cantidad) * to_decimal(item.precio_unitario)
+            )
             item.save(update_fields=["costo_parcial"])
 
             recalcular_item_gastos_generales(item)
@@ -677,26 +692,103 @@ class GastoOperacionViewSet(viewsets.ModelViewSet):
     def mover_item(self, request):
         item_id = request.data.get("item_id")
         modulo_destino_id = request.data.get("modulo_destino_id")
+        orden_destino = request.data.get("orden_destino")
 
-        if not item_id or not modulo_destino_id:
+        if not item_id or not modulo_destino_id or orden_destino is None:
             return Response({"error": "Datos incompletos"}, status=400)
 
         try:
-            item = GastoOperacion.objects.select_related("modulo__proyecto").get(id=int(item_id))
-            modulo_destino = Modulo.objects.select_related("proyecto").get(id=int(modulo_destino_id))
+            item = GastoOperacion.objects.select_related(
+                "modulo__proyecto"
+            ).get(id=int(item_id))
+
+            modulo_destino = Modulo.objects.select_related(
+                "proyecto"
+            ).get(id=int(modulo_destino_id))
+
+            orden_destino = int(orden_destino)
+
         except Exception:
-            return Response({"error": "Ítem o módulo no encontrado"}, status=404)
+            return Response({"error": "Datos inválidos"}, status=400)
 
-        # seguridad y coherencia: mismo proyecto
+        # Seguridad
         if item.modulo.proyecto_id != modulo_destino.proyecto_id:
-            return Response({"error": "El módulo destino debe pertenecer al mismo proyecto"}, status=400)
+            return Response(
+                {"error": "El módulo destino debe pertenecer al mismo proyecto"},
+                status=400,
+            )
 
-        if getattr(request, "user", None) and request.user.is_authenticated:
+        if request.user.is_authenticated:
             if item.modulo.proyecto.creado_por_id != request.user.id:
                 return Response({"error": "No autorizado"}, status=403)
 
-        item.modulo = modulo_destino
-        item.save(update_fields=["modulo"])
+        modulo_origen = item.modulo
+        orden_origen = item.orden
+
+        # cantidad de filas del módulo destino
+        total = GastoOperacion.objects.filter(modulo=modulo_destino).count()
+
+        if modulo_origen.id == modulo_destino.id:
+            total -= 1
+
+        if orden_destino < 1:
+            orden_destino = 1
+
+        if orden_destino > total + 1:
+            orden_destino = total + 1
+
+        # -------------------------------------------------------
+        # MISMO MÓDULO
+        # -------------------------------------------------------
+        if modulo_origen.id == modulo_destino.id:
+
+            if orden_destino < orden_origen:
+
+                GastoOperacion.objects.filter(
+                    modulo=modulo_origen,
+                    orden__gte=orden_destino,
+                    orden__lt=orden_origen,
+                ).update(
+                    orden=F("orden") + 1
+                )
+
+            elif orden_destino > orden_origen:
+
+                GastoOperacion.objects.filter(
+                    modulo=modulo_origen,
+                    orden__gt=orden_origen,
+                    orden__lte=orden_destino,
+                ).update(
+                    orden=F("orden") - 1
+                )
+
+            item.orden = orden_destino
+            item.save(update_fields=["orden"])
+
+        # -------------------------------------------------------
+        # ENTRE MÓDULOS
+        # -------------------------------------------------------
+        else:
+
+            # cerrar hueco en origen
+            GastoOperacion.objects.filter(
+                modulo=modulo_origen,
+                orden__gt=orden_origen,
+            ).update(
+                orden=F("orden") - 1
+            )
+
+            # abrir espacio en destino
+            GastoOperacion.objects.filter(
+                modulo=modulo_destino,
+                orden__gte=orden_destino,
+            ).update(
+                orden=F("orden") + 1
+            )
+
+            item.modulo = modulo_destino
+            item.orden = orden_destino
+            item.save(update_fields=["modulo", "orden"])
 
         recalcular_item_gastos_generales(item)
 

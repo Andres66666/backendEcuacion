@@ -24,10 +24,11 @@ git checkout -b Produccion
 ```bash
 git status
 git add .
-git commit -m "Correo"
+git commit -m "mover"
 git push origin Produccion
 ```
 
+peligrosssssssssssssssssssssssssss
 git remote remove origin
 git remote add origin https://github.com/Andres66666/FrontendEcuacion.git
 git remote -v
@@ -48,7 +49,7 @@ git checkout -b Produccion
 ```bash
 git status
 git add .
-git commit -m "ultimo cambios 15"
+git commit -m "mover posicion"
 git push origin Produccion
 ```
 

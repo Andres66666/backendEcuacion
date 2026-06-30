@@ -172,6 +172,7 @@ class GastoOperacion(models.Model):
     cantidad = models.DecimalField(max_digits=10, decimal_places=2)
     precio_unitario = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     costo_parcial = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    orden = models.PositiveIntegerField(default=1) # posicion 
 
     def __str__(self):
         return f"{self.descripcion} ({self.cantidad} {self.unidad} @ {self.precio_unitario})"
